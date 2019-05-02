@@ -24,8 +24,7 @@ onmessage = function(e) {
             // Convert values in dataset from strings to their proper types.
 
             postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS, 0, "Converting Values..."));
-            let progress = 0;
-            let progInt = setInterval(sendProgress, 1, progress, "Converting Values...");
+            let lastPercent = 0;
 
             data.forEach(function(report, index) {
               report.time = new Date(report.time);
@@ -36,18 +35,21 @@ onmessage = function(e) {
               report.shake_intensity = (report.shake_intensity) ? +report.shake_intensity : -1;
               report.location = +report.location;
               this[index] = report;
-              progress = (index + 1) / this.length * 100;
-            }, data);
 
-            clearInterval(progInt);
-            postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS_FIN))
+              let percent = ((index + 1) / this.length * 100) >> 0;
+              if (lastPercent != percent) {
+                postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS, percent, "Converting Values..."));
+                lastPercent = percent;
+              }
+            }, data);
 
             // Sort the reports by date.
             data.sort(function(a,b) {
               return a.time - b.time;
             });
 
-            postMessage(data);
+            postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS, 0, "Adding values to database..."));
+            lastPercent = 0;
 
             // Add the reports to the indexedDB.
             let reportObjectStore = db.transaction(["reports"], "readwrite").objectStore("reports");
@@ -55,12 +57,22 @@ onmessage = function(e) {
             let pending = true;
             data.forEach(function(report, index) {
               let addRequest = reportObjectStore.add(report);
-              if (index == data.length -1) {
+              if (index == this.length -1) {
                 addRequest.onsuccess = addRequest.onerror = function(event) {
+                  postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS_FIN));
                   postMessage(new WorkerMessage(WorkerMessage.TYPE_STATUS, WorkerMessage.STATUS_READY));
                 };
               }
-            });
+
+              let percent = ((index + 1) / this.length * 100) >> 0;
+              if (lastPercent != percent) {
+                postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS, percent, "Adding values to database..."));
+                lastPercent = percent;
+              }
+            }, data);
+
+            postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS, 0, "Finalizing database..."));
+
           }).catch(function(err) {
             postMessage(new WorkerMessage(WorkerMessage.TYPE_ERROR, err));
           });
@@ -143,8 +155,8 @@ function createSchema(db) {
   return objectStore
 }
 
-function sendProgress(prog, msg) {
-  postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS, prog, msg))
+function sendProgress(i, n, msg) {
+  postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS, i / n * 100, msg))
 }
 
 function getSum(total, n) {

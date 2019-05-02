@@ -2,9 +2,29 @@
 <meta charset="utf-8">
 <html>
   <head>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
   </head>
   <body>
+    <div id="loadingmodal" class="modal fade" role="dialog">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title">Loading</h4>
+          </div>
+          <div class="modal-body">
+            <div class="progress">
+              <div id="loadingprogress" class="progress-bar" role="progressbar" style="width:0%; transition-duration: 0.2s">
+              </div>
+            </div>
+            <div id="loadingmessage"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     <script src="lib/d3.v5.min.js"></script>
+    <script src="lib/jquery-3.3.1.slim.min.js"></script>
+    <script src="lib/popper.min.js"></script>
+    <script src="lib/bootstrap.min.js"></script>
     <script src="js/messagehelper.js"></script>
     <script>
       var worker = new Worker("js/dataworker.js");
@@ -14,10 +34,19 @@
         let msg = message.data;
         console.log(msg);
         if (msg.type == WorkerMessage.TYPE_STATUS && msg.data[0] == WorkerMessage.STATUS_READY) {
-            console.log("Ready to work");
+          console.log("Ready to work");
         } else if (msg.type == WorkerMessage.TYPE_PROGRESS) {
-            console.log(msg.data[1] + " " + msg.data[0]);
+          progressMessage(msg.data[0], msg.data[1]);
+          console.log(msg.data[1] + " " + msg.data[0]);
+        } else if (msg.type == WorkerMessage.TYPE_PROGRESS_FIN) {
+          $("#loadingmodal").modal("hide");
         }
+      }
+
+      function progressMessage(prog, msg) {
+          $("#loadingmodal").modal("show");
+          $("#loadingmessage").html(msg);
+          $("#loadingprogress").css("width", prog + "%");
       }
 
       worker.postMessage(["init"]);
