@@ -33,8 +33,12 @@ class MapData {
         .style("fill", "white")
         .attr("data-toggle", "tooltip")
         .attr("title", function(d) { return d.properties.Nbrhood; })
-        .on("mouseover", function(d) { $(this).tooltip("show"); })
-        .on("mouseout", function(d) { $(this).tooltip("hide"); });
+        .on("mouseover", function(d) {
+          $(this).tooltip("show").css("filter", "brightness(80%)");
+        })
+        .on("mouseout", function(d) {
+          $(this).tooltip("hide").css("filter", "none"); 
+        });
     }
   }
 
