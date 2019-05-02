@@ -3,6 +3,12 @@
 <html>
   <head>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <style>
+      svg {
+        width: 500px;
+        height: 500px;
+      }
+    </style>
   </head>
   <body>
     <div id="loadingmodal" class="modal fade" role="dialog">
@@ -26,7 +32,39 @@
     <script src="lib/popper.min.js"></script>
     <script src="lib/bootstrap.min.js"></script>
     <script src="js/messagehelper.js"></script>
+    <div id="svgContainer">
+    </div>
     <script>
+      width = 500;
+      height = 500;
+
+      var projection = d3.geoMercator()
+              .center([-119.847,0.11804])
+              .scale(80000)
+              // Center the Map in Colombia
+
+              .translate([width / 2, height / 2]);
+
+      var path = d3.geoPath()
+              .projection(projection);
+
+      var svg = document.createElementNS(d3.namespaces.svg, "svg");
+      d3.select(this.svg).attr("viewBox", "0 0 " + width + " " + height);
+
+      $("#svgContainer").append(svg)
+      d3.json('data/Quake.geojson').then( function(mapData) {
+        var features = mapData.features;
+        console.log(features);
+        // Draw each province as a path
+        d3.select(this.svg).selectAll('path')
+                .data(features)
+                .enter().append('path')
+                .attr('d', d3.geoPath(projection))
+                .style("fill", "#aca")
+                .style("stroke", "#000")
+                .style("stroke-width", "0.5px")
+
+      });
       var worker = new Worker("js/dataworker.js");
 
       let status = 0;
