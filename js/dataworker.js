@@ -97,7 +97,7 @@ onmessage = function(e) {
 
     request.onsuccess = function(event) {
       let db = event.target.result;
-      let reportObjectStore = db.transaction(["reports"], "readwrite").objectStore("reports");
+      let reportObjectStore = db.transaction(["reports"], "read").objectStore("reports");
       let cursorRequest;
 
       if (location) {
@@ -122,6 +122,8 @@ onmessage = function(e) {
         }
       }
     }
+  } else if (e.data[0] == "get") {
+
   }
 }
 
