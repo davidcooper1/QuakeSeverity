@@ -4,5 +4,25 @@
   <head>
   </head>
   <body>
+    <script src="lib/d3.v5.min.js"></script>
+    <script src="js/messagehelper.js"></script>
+    <script>
+      var worker = new Worker("js/dataworker.js");
+
+      let status = 0;
+      worker.onmessage = function(message) {
+        let msg = message.data;
+        console.log(msg);
+        if (msg.type == WorkerMessage.TYPE_STATUS && msg.data[0] == WorkerMessage.STATUS_READY) {
+            console.log("Ready to work");
+        } else if (msg.type == WorkerMessage.TYPE_PROGRESS) {
+            console.log(msg.data[1] + " " + msg.data[0]);
+        }
+      }
+
+      worker.postMessage(["init"]);
+
+
+    </script>
   </body>
 </html>

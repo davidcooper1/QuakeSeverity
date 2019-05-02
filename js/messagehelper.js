@@ -1,31 +1,18 @@
-class StatusMessage {
+class WorkerMessage {
 
-  constructor(status) {
-    this.type = "status";
-    this.status = status;
+  constructor(type, ...args) {
+    this.type = type;
+    this.data = args;
   }
 
 }
 
-StatusMessage.READY = 0;
-StatusMessage.LOADING = 1;
-StatusMessage.UPDATING = 2;
+WorkerMessage.STATUS_READY = 0;
+WorkerMessage.STATUS_LOADING = 1;
+WorkerMessage.STATUS_UPDATING = 2;
 
-class ProgressMessage {
-
-  constructor(i, n, msg) {
-    this.type = "progress";
-    this.percent = (i / n) * 100;
-    this.msg = msg;
-  }
-
-}
-
-class ErrorMessage {
-
-  constructor(err) {
-    this.type = "error"
-    this.err = err;
-  }
-
-}
+WorkerMessage.TYPE_STATUS         = "status";
+WorkerMessage.TYPE_ERROR          = "error";
+WorkerMessage.TYPE_PROGRESS_FIN   = "pfin";
+WorkerMessage.TYPE_PROGRESS       = "progress";
+WorkerMessage.TYPE_DATA           = "data";

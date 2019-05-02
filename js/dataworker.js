@@ -6,24 +6,27 @@ const DB_VERSION = 1;
 
 onmessage = function(e) {
   if (e.data[0] == "init") {
-    // Load file first to ensure that request.onsuccess runs after request.onupgradeneeded has finished.
-    d3.csv("../data/mc1-reports-data.csv")
-    .then(function(data) {
-      postMessage(new StatusMessage(StatusMessage.LOADING));
-      let request = indexedDB.open(DB_NAME, DB_VERSION);
-      let needsUpdating = false;
+    postMessage(new WorkerMessage(WorkerMessage.TYPE_STATUS, WorkerMessage.STATUS_LOADING));
+    let request = indexedDB.open(DB_NAME, DB_VERSION);
+    let needsUpdating = false;
 
-      // Ran if indexedDB created or if the version requested is higher than the version found.
-      request.onupgradeneeded = function(event) {
-        needsUpdating = true;
-        postMessage(new StatusMessage(StatusMessage.UPDATING));
+    // Ran if indexedDB created or if the version requested is higher than the version found.
+    request.onupgradeneeded = function(event) {
+      needsUpdating = true;
+      postMessage(new WorkerMessage(WorkerMessage.TYPE_STATUS, WorkerMessage.STATUS_UPDATING));
 
-        let db = event.target.result;
-        let objectStore = createSchema(db);
+      let db = event.target.result;
+      let objectStore = createSchema(db);
 
-        // Executed after the schema has been created.
-        objectStore.transaction.oncomplete = function(ev) {
+      // Executed after the schema has been created.
+      objectStore.transaction.oncomplete = function(ev) {
+          d3.csv("../data/mc1-reports-data.csv").then(function(data) {
             // Convert values in dataset from strings to their proper types.
+
+            postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS, 0, "Converting Values..."));
+            let progress = 0;
+            let progInt = setInterval(sendProgress, 1, progress, "Converting Values...");
+
             data.forEach(function(report, index) {
               report.time = new Date(report.time);
               report.sewer_and_water = (report.sewer_and_water) ? +report.sewer_and_water : -1;
@@ -33,7 +36,11 @@ onmessage = function(e) {
               report.shake_intensity = (report.shake_intensity) ? +report.shake_intensity : -1;
               report.location = +report.location;
               this[index] = report;
+              progress = (index + 1) / this.length * 100;
             }, data);
+
+            clearInterval(progInt);
+            postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS_FIN))
 
             // Sort the reports by date.
             data.sort(function(a,b) {
@@ -47,30 +54,29 @@ onmessage = function(e) {
             reportObjectStore.add(data[0]);
             let pending = true;
             data.forEach(function(report, index) {
-              let request = reportObjectStore.add(report);
+              let addRequest = reportObjectStore.add(report);
               if (index == data.length -1) {
-                request.onsuccess = request.onerror = function(event) {
-                  postMessage(new StatusMessage(StatusMessage.READY));
+                addRequest.onsuccess = addRequest.onerror = function(event) {
+                  postMessage(new WorkerMessage(WorkerMessage.TYPE_STATUS, WorkerMessage.STATUS_READY));
                 };
               }
             });
-        }
+          }).catch(function(err) {
+            postMessage(new WorkerMessage(WorkerMessage.TYPE_ERROR, err));
+          });
       }
+    }
 
-      // Ran if an error occurs accessing the indexedDB
-      request.onerror = function(event) {
-        postMessage(new ErrorMessage(err));
-      }
+    // Ran if an error occurs accessing the indexedDB
+    request.onerror = function(event) {
+      postMessage(new WorkerMessage(WorkerMessage.TYPE_ERROR, err));
+    }
 
-      // Ran if the database is opened successfully.
-      request.onsuccess = function(event) {
-        if (!needsUpdating)
-          postMessage(new StatusMessage(StatusMessage.READY));
-      }
-    })
-    .catch(function(error) {
-      postMessage(error);
-    })
+    // Ran if the database is opened successfully.
+    request.onsuccess = function(event) {
+      if (!needsUpdating)
+        postMessage(new WorkerMessage(WorkerMessage.TYPE_STATUS, WorkerMessage.STATUS_READY));
+    }
   } else if (e.data[0] == "getavg") {
     let category = e.data[1];
     let location = (e.data[2]) ? e.data[2] : null;
@@ -100,7 +106,7 @@ onmessage = function(e) {
             data.push(rating);
           cursor.continue();
         } else {
-          postMessage(data);
+          postMessage(data.reduce(getSum, 0) / data.length);
         }
       }
     }
@@ -135,6 +141,10 @@ function createSchema(db) {
   });
 
   return objectStore
+}
+
+function sendProgress(prog, msg) {
+  postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS, prog, msg))
 }
 
 function getSum(total, n) {
