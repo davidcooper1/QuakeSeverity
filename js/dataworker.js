@@ -48,6 +48,11 @@ onmessage = function(e) {
               return a.time - b.time;
             });
 
+            // Sort the reports by location.
+            data.sort(function(a,b) {
+              return a.location - b.location;
+            });
+
             postMessage(new WorkerMessage(WorkerMessage.TYPE_PROGRESS, 0, "Adding values to database..."));
             lastPercent = 0;
 
@@ -86,41 +91,68 @@ onmessage = function(e) {
 
     // Ran if the database is opened successfully.
     request.onsuccess = function(event) {
-      if (!needsUpdating)
+      if (!needsUpdating) {
+        event.target.result.close();
         postMessage(new WorkerMessage(WorkerMessage.TYPE_STATUS, WorkerMessage.STATUS_READY));
+      }
     }
   } else if (e.data[0] == "getavg") {
     let category = e.data[1];
-    let location = (e.data[2]) ? e.data[2] : null;
 
     let request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onsuccess = function(event) {
       let db = event.target.result;
-      let reportObjectStore = db.transaction(["reports"], "read").objectStore("reports");
-      let cursorRequest;
+      let reportObjectStore = db.transaction(["reports"], "readonly").objectStore("reports");
+      let locationIndex = reportObjectStore.index("location");
+      let locationCursorRequest = locationIndex.openKeyCursor(null, "nextunique");
 
-      if (location) {
-        let locationIndex = reportObjectStore.index("location");
-        let keyRange = IDBKeyRange.only(location);
-        cursorRequest = locationIndex.openCursor(keyRange);
-      } else {
-        cursorRequest = reportObjectStore.openCursor();
-      }
+      function processCategory(location, categoryBounds) {
+        let categoryCursorRequest = reportObjectStore.openCursor(categoryBounds);
+        let sum = 0;
+        let n = 0;
 
-      let data = [];
-      cursorRequest.onsuccess = function(e) {
-        let cursor = e.target.result;
-        if (cursor) {
-          let report = cursor.value;
-          let rating = report[category]
-          if (rating != -1)
-            data.push(rating);
-          cursor.continue();
-        } else {
-          postMessage(data.reduce(getSum, 0) / data.length);
+        categoryCursorRequest.onsuccess = function(ce) {
+          let categoryCursor = ce.target.result;
+          if (categoryCursor) {
+            let report = categoryCursor.value;
+            let rating = report[category];
+            if (rating != -1) {
+              sum += rating;
+              n++;
+            }
+            categoryCursor.continue();
+          } else {
+            postMessage(new WorkerMessage(
+              WorkerMessage.TYPE_DATA,
+              "intensity",
+              location,
+              sum / n
+            ));
+            db.close();
+          }
         }
       }
+
+      let lastPrimaryKeyLocation = 1;
+      let lastLocation;
+      locationCursorRequest.onsuccess = function(le) {
+        let locationCursor = le.target.result;
+        if (locationCursor) {
+          if (locationCursor.primaryKey > lastPrimaryKeyLocation) {
+            let categoryBounds = IDBKeyRange.bound(lastPrimaryKeyLocation, locationCursor.primaryKey, false, true);
+            processCategory(lastLocation, categoryBounds);
+          }
+
+          lastPrimaryKeyLocation = locationCursor.primaryKey;
+          lastLocation = locationCursor.key;
+          locationCursor.continue();
+        } else {
+          let categoryBounds = IDBKeyRange.lowerBound(lastPrimaryKeyLocation);
+          processCategory(lastLocation, categoryBounds);
+        }
+      }
+
     }
   } else if (e.data[0] == "get") {
 

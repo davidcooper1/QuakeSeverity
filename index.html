@@ -31,64 +31,65 @@
     <script src="lib/jquery-3.3.1.slim.min.js"></script>
     <script src="lib/popper.min.js"></script>
     <script src="lib/bootstrap.min.js"></script>
+    <script src="js/mapdata.js"></script>
     <script src="js/messagehelper.js"></script>
     <div id="svgContainer">
     </div>
     <script>
-      width = 500;
-      height = 500;
+      let map = new MapData(500, 500);
+      $("#svgContainer").append(map.svg);
 
-      var projection = d3.geoMercator()
-              .center([-119.847,0.11804])
-              .scale(80000)
-              // Center the Map in Colombia
-
-              .translate([width / 2, height / 2]);
-
-      var path = d3.geoPath()
-              .projection(projection);
-
-      var svg = document.createElementNS(d3.namespaces.svg, "svg");
-      d3.select(this.svg).attr("viewBox", "0 0 " + width + " " + height);
-
-      $("#svgContainer").append(svg)
       d3.json('data/Quake.geojson').then( function(mapData) {
         var features = mapData.features;
-        console.log(features);
-        // Draw each province as a path
-        d3.select(this.svg).selectAll('path')
-                .data(features)
-                .enter().append('path')
-                .attr('d', d3.geoPath(projection))
-                .style("fill", "#aca")
-                .style("stroke", "#000")
-                .style("stroke-width", "0.5px")
-
+        map.data = features;
+        map.draw();
+        init();
       });
+
       var worker = new Worker("js/dataworker.js");
 
-      let status = 0;
-      worker.onmessage = function(message) {
+      let waitingOn = 0;
+      let start, end;
+      function onworkermessage(message) {
         let msg = message.data;
         console.log(msg);
         if (msg.type == WorkerMessage.TYPE_STATUS && msg.data[0] == WorkerMessage.STATUS_READY) {
-          console.log("Ready to work");
+          let ids = map.getPathIds();
+          start = new Date();
+          waitingOn = ids.length;
+          worker.postMessage(["getavg", "power"]);
         } else if (msg.type == WorkerMessage.TYPE_PROGRESS) {
-          progressMessage(msg.data[0], msg.data[1]);
-          console.log(msg.data[1] + " " + msg.data[0]);
+          databaseProgressMessage(msg.data[0], msg.data[1]);
         } else if (msg.type == WorkerMessage.TYPE_PROGRESS_FIN) {
           $("#loadingmodal").modal("hide");
+        } else if (msg.type == WorkerMessage.TYPE_DATA) {
+          if (msg.data[0] == "intensity") {
+            waitingOn--;
+            map.setIntensity(msg.data[1], msg.data[2]);
+            if (waitingOn == 0) {
+              end = new Date()
+              console.log((end - start) / 1000);
+            }
+          }
         }
       }
+      worker.onmessage = onworkermessage;
 
-      function progressMessage(prog, msg) {
+      function databaseProgressMessage(prog, msg) {
           $("#loadingmodal").modal("show");
           $("#loadingmessage").html(msg);
           $("#loadingprogress").css("width", prog + "%");
       }
 
-      worker.postMessage(["init"]);
+      function init() {
+        worker.postMessage(["init"]);
+      }
 
+      function resetWorker() {
+        worker.terminate();
+        worker = new Worker("js/dataworker.js");
+        worker.onmessage = onworkermessage;
+      }
 
     </script>
   </body>
