@@ -30,7 +30,11 @@ class MapData {
         .append("path")
         .attr("d", this.pathBuilder)
         .style("stroke", "black")
-        .style("fill", "white");
+        .style("fill", "white")
+        .attr("data-toggle", "tooltip")
+        .attr("title", function(d) { return d.properties.Nbrhood; })
+        .on("mouseover", function(d) { $(this).tooltip("show"); })
+        .on("mouseout", function(d) { $(this).tooltip("hide"); });
     }
   }
 
