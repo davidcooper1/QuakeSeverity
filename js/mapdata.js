@@ -37,7 +37,7 @@ class MapData {
           $(this).tooltip("show").css("filter", "brightness(80%)");
         })
         .on("mouseout", function(d) {
-          $(this).tooltip("hide").css("filter", "none"); 
+          $(this).tooltip("hide").css("filter", "none");
         });
     }
   }
@@ -46,7 +46,6 @@ class MapData {
     let self = this;
     this.paths.each(function(d) {
       if (d.properties.Id == id) {
-        console.log("filled");
         d3.select(this).style("fill", self.colorScale(intensity));
       }
     });

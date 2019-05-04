@@ -49,7 +49,7 @@
         init();
       });
 
-      var worker = new Worker("js/dataworker.js");
+      var worker = new Worker("js/worker.js");
 
       let waitingOn = 0;
       let start, end;
@@ -57,9 +57,6 @@
         let msg = message.data;
         console.log(msg);
         if (msg.type == WorkerMessage.TYPE_STATUS && msg.data[0] == WorkerMessage.STATUS_READY) {
-          let ids = map.getPathIds();
-          start = new Date();
-          waitingOn = ids.length;
           worker.postMessage(["getavg", "power"]);
         } else if (msg.type == WorkerMessage.TYPE_PROGRESS) {
           databaseProgressMessage(msg.data[0], msg.data[1]);
@@ -67,11 +64,7 @@
           $("#loadingmodal").modal("hide");
         } else if (msg.type == WorkerMessage.TYPE_DATA) {
           if (msg.data[0] == "intensity") {
-            waitingOn--;
             map.setIntensity(msg.data[1], msg.data[2]);
-            if (waitingOn == 0) {
-              alert("Finished");
-            }
           }
         }
       }
@@ -92,7 +85,6 @@
         }
         categorySelectList.on("change", function(e) {
           let category = $(this).children("option:selected").val();
-          resetWorker();
           let ids = map.getPathIds();
           waitingOn = ids.length;
           worker.postMessage(["getavg", category]);
@@ -102,7 +94,7 @@
 
       function resetWorker() {
         worker.terminate();
-        worker = new Worker("js/dataworker.js");
+        worker = new Worker("js/worker.js");
         worker.onmessage = onworkermessage;
       }
 

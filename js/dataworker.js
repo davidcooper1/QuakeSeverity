@@ -107,7 +107,45 @@ onmessage = function(e) {
       let locationIndex = reportObjectStore.index("location");
       let locationCursorRequest = locationIndex.openKeyCursor(null, "nextunique");
 
-      function processCategory(location, categoryBounds) {
+      function processCategoryParallel(location, categoryBounds) {
+        //let categoryCursorRequest = reportObjectStore.openCursor(categoryBounds);
+        let sum = 0;
+        let n = 0;
+        let eCount = 200;
+        //let cursorReqs = []
+        let cursorDoneCount = 0;
+        let count = Math.ceil((categoryBounds.upper - categoryBounds.lower) / eCount);
+
+
+        for (let j = 0; j < count; j++) {
+          let i = j;
+          let upper = categoryBounds.lower + (i + 1) * eCount;
+          upper = (upper < categoryBounds.upper) ? upper : categoryBounds.upper;
+          let cursorReq = reportObjectStore.openCursor(IDBKeyRange.bound(categoryBounds.lower + i * eCount, upper));
+          cursorReq.onsuccess = function(e) {
+            if (cursorReq.result) {
+              let report = cursorReq.result.value;
+              let rating = report[category];
+              if (rating != -1) {
+                sum += rating;
+                n++;
+              }
+              cursorReq.result.continue();
+            } else {
+              if (++cursorDoneCount >= count) {
+                postMessage(new WorkerMessage(
+                  WorkerMessage.TYPE_DATA,
+                  "intensity",
+                  location,
+                  sum / n
+                ));
+              }
+            }
+          }
+        }
+      }
+
+      function processCategorySequential(location, categoryBounds) {
         let categoryCursorRequest = reportObjectStore.openCursor(categoryBounds);
         let sum = 0;
         let n = 0;
@@ -129,7 +167,6 @@ onmessage = function(e) {
               location,
               sum / n
             ));
-            db.close();
           }
         }
       }
@@ -139,17 +176,15 @@ onmessage = function(e) {
       locationCursorRequest.onsuccess = function(le) {
         let locationCursor = le.target.result;
         if (locationCursor) {
-          if (locationCursor.primaryKey > lastPrimaryKeyLocation) {
-            let categoryBounds = IDBKeyRange.bound(lastPrimaryKeyLocation, locationCursor.primaryKey, false, true);
-            processCategory(lastLocation, categoryBounds);
+          let countReq = locationCursor.source.count(locationCursor.key);
+          countReq.onsuccess = function(e) {
+            let count = countReq.result;
+            let categoryBounds = IDBKeyRange.bound(locationCursor.primaryKey, locationCursor.primaryKey + count);
+            processCategoryParallel(locationCursor.key, categoryBounds);
           }
-
-          lastPrimaryKeyLocation = locationCursor.primaryKey;
-          lastLocation = locationCursor.key;
           locationCursor.continue();
         } else {
-          let categoryBounds = IDBKeyRange.lowerBound(lastPrimaryKeyLocation);
-          processCategory(lastLocation, categoryBounds);
+          db.close();
         }
       }
 
