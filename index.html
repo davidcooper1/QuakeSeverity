@@ -58,8 +58,9 @@
               console.log("Query Time: " + (queryEnd - queryStart) + "ms");
             }
           } else if (msg.data[0] == "range") {
-            let start = new Date(msg.data[1]);
-            let end = new Date(msg.data[2]);
+            let start = new Date(msg.data[1].replace(" ", "T"));
+            let end = new Date(msg.data[2].replace(" ", "T"));
+            
             $("#slider-range").slider({
               range: true,
               min: +(start),
