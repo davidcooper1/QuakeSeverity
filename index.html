@@ -2,6 +2,7 @@
 <meta charset="utf-8">
 <html>
   <head>
+    <link rel="stylesheet" href="css/jquery-ui.min.css"/>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <style>
       svg {
@@ -12,12 +13,16 @@
   </head>
   <body>
     <div id="svgContainer"></div>
+    <div id="dates"></div>
+    <div id="slider-range"></div>
     <div>
       <select id="categorySelect">
       </select>
     </div>
+    <script src="lib/polyfill.js"></script>
     <script src="lib/d3.v5.min.js"></script>
-    <script src="lib/jquery-3.3.1.slim.min.js"></script>
+    <script src="lib/jquery-3.4.1.min.js"></script>
+    <script src="lib/jquery-ui.min.js"></script>
     <script src="lib/popper.min.js"></script>
     <script src="lib/bootstrap.min.js"></script>
     <script src="js/mapdata.js"></script>
@@ -36,29 +41,55 @@
       var worker = new Worker("js/dataworker.js");
 
       let waitingOn = 0;
-      let start, end;
+      let queryStart, queryEnd;
       worker.onmessage = function (event) {
         let msg = event.data;
-        //console.log(msg);
+        console.log(msg);
         if (msg.type == WorkerMessage.TYPE_STATUS && msg.data[0] == WorkerMessage.STATUS_READY) {
-          worker.postMessage(["getavg", "power"]);
-          start = new Date();
+          worker.postMessage(["getdaterange"]);
+          queryStart = new Date();
           waitingOn = 19;
         } else if (msg.type == WorkerMessage.TYPE_DATA) {
           if (msg.data[0] == "intensity") {
             map.setIntensity(msg.data[1], msg.data[2]);
             waitingOn--;
             if (waitingOn == 0) {
-              end = new Date();
-              console.log("Query Time: " + (end - start) + "ms");
+              queryEnd = new Date();
+              console.log("Query Time: " + (queryEnd - queryStart) + "ms");
             }
+          } else if (msg.data[0] == "range") {
+            let start = new Date(msg.data[1]);
+            let end = new Date(msg.data[2]);
+            $("#slider-range").slider({
+              range: true,
+              min: +(start),
+              max: +(end),
+              values: [+start, +end],
+              change: function(event, ui) {
+                let newStart = new Date(ui.values[0]);
+                let newEnd = new Date(ui.values[1]);
+                $("#dates").html(newStart.toDatabaseString() + " - " + newEnd.toDatabaseString());
+                queryStart = new Date();
+                waitingOn = 19
+                worker.postMessage([
+                  "getavg",
+                  $("#categorySelect").children("option:selected").val(),
+                  newStart.toDatabaseString(),
+                  newEnd.toDatabaseString()
+                ]);
+              }
+            });
+            $("#dates").html(
+              start.toDatabaseString() + " - " + end.toDatabaseString()
+            );
+            worker.postMessage(["getavg", "shake_intensity", msg.data[1], msg.data[2]]);
           }
         }
       }
 
       function init() {
-        let categories = ["sewer_and_water", "power", "medical",
-          "buildings", "shake_intensity"];
+        let categories = ["shake_intensity", "sewer_and_water", "power", "medical",
+          "buildings"];
         let categorySelectList = $("#categorySelect");
         for (let i = 0; i < categories.length; i++) {
           categorySelectList.append(new Option(categories[i], categories[i]));

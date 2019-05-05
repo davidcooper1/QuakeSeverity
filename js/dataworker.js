@@ -7,9 +7,21 @@ self.addEventListener("message", function(event) {
   let message = event.data;
   if (message[0] === "init") {
     loadDBObject();
+  } else if (message[0] == "getdaterange") {
+    let result = db.exec("SELECT MIN(time_of_report) AS earliest, MAX(time_of_report) AS latest FROM reports");
+    postMessage(new WorkerMessage(
+      WorkerMessage.TYPE_DATA,
+      "range",
+      result[0].values[0][0],
+      result[0].values[0][1]
+    ));
   } else if (message[0] == "getavg") {
     let category = message[1];
-    let result = db.exec(`SELECT neighborhood_id, AVG(${category}) FROM reports GROUP BY neighborhood_id`);
+    let start = message[2];
+    let end = message[3];
+    postMessage(start);
+    postMessage(end);
+    let result = db.exec(`SELECT neighborhood_id, AVG(${category}) FROM reports WHERE time_of_report BETWEEN '${start}' AND '${end}' GROUP BY neighborhood_id`);
 
     let values = result[0].values;
 
@@ -19,10 +31,10 @@ self.addEventListener("message", function(event) {
         "intensity",
         values[i][0],
         values[i][1]
-      ))
+      ));
     }
   }
-})
+});
 
 function loadDBObject() {
   initSqlJs({locateFile: fileName => `../bin/${fileName}`}).then(function(SQL) {
