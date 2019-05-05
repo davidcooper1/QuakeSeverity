@@ -11,22 +11,6 @@
     </style>
   </head>
   <body>
-    <div id="loadingmodal" class="modal fade" role="dialog">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h4 class="modal-title">Loading</h4>
-          </div>
-          <div class="modal-body">
-            <div class="progress">
-              <div id="loadingprogress" class="progress-bar" role="progressbar" style="width:0%; transition-duration: 0.2s">
-              </div>
-            </div>
-            <div id="loadingmessage"></div>
-          </div>
-        </div>
-      </div>
-    </div>
     <div id="svgContainer"></div>
     <div>
       <select id="categorySelect">
@@ -60,10 +44,6 @@
           worker.postMessage(["getavg", "power"]);
           start = new Date();
           waitingOn = 19;
-        } else if (msg.type == WorkerMessage.TYPE_PROGRESS) {
-          databaseProgressMessage(msg.data[0], msg.data[1]);
-        } else if (msg.type == WorkerMessage.TYPE_PROGRESS_FIN) {
-          $("#loadingmodal").modal("hide");
         } else if (msg.type == WorkerMessage.TYPE_DATA) {
           if (msg.data[0] == "intensity") {
             map.setIntensity(msg.data[1], msg.data[2]);
