@@ -53,9 +53,9 @@
 
       let waitingOn = 0;
       let start, end;
-      function onworkermessage(message) {
-        let msg = message.data;
-        console.log(msg);
+      worker.onmessage = function (event) {
+        let msg = event.data;
+        //console.log(msg);
         if (msg.type == WorkerMessage.TYPE_STATUS && msg.data[0] == WorkerMessage.STATUS_READY) {
           worker.postMessage(["getavg", "power"]);
           start = new Date();
@@ -75,17 +75,10 @@
           }
         }
       }
-      worker.onmessage = onworkermessage;
-
-      function databaseProgressMessage(prog, msg) {
-          $("#loadingmodal").modal("show");
-          $("#loadingmessage").html(msg);
-          $("#loadingprogress").css("width", prog + "%");
-      }
 
       function init() {
         let categories = ["sewer_and_water", "power", "medical",
-          "buildings", "shake_intensity", "location"];
+          "buildings", "shake_intensity"];
         let categorySelectList = $("#categorySelect");
         for (let i = 0; i < categories.length; i++) {
           categorySelectList.append(new Option(categories[i], categories[i]));
@@ -98,12 +91,6 @@
           worker.postMessage(["getavg", category]);
         });
         worker.postMessage(["init"]);
-      }
-
-      function resetWorker() {
-        worker.terminate();
-        worker = new Worker("js/dataworker.js");
-        worker.onmessage = onworkermessage;
       }
 
     </script>
