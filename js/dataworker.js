@@ -19,9 +19,7 @@ self.addEventListener("message", function(event) {
     let category = message[1];
     let start = message[2];
     let end = message[3];
-    postMessage(start);
-    postMessage(end);
-    let result = db.exec(`SELECT neighborhood_id, AVG(${category}) FROM reports WHERE time_of_report BETWEEN '${start}' AND '${end}' GROUP BY neighborhood_id`);
+    let result = db.exec(`SELECT neighborhood_id, COALESCE(AVG(${category}),0) FROM reports WHERE time_of_report BETWEEN '${start}' AND '${end}' GROUP BY neighborhood_id`);
 
     let values = result[0].values;
 

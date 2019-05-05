@@ -44,7 +44,7 @@
       let queryStart, queryEnd;
       worker.onmessage = function (event) {
         let msg = event.data;
-        console.log(msg);
+        //console.log(msg);
         if (msg.type == WorkerMessage.TYPE_STATUS && msg.data[0] == WorkerMessage.STATUS_READY) {
           worker.postMessage(["getdaterange"]);
           queryStart = new Date();
@@ -60,7 +60,7 @@
           } else if (msg.data[0] == "range") {
             let start = new Date(msg.data[1].replace(" ", "T"));
             let end = new Date(msg.data[2].replace(" ", "T"));
-            
+
             $("#slider-range").slider({
               range: true,
               min: +(start),
@@ -99,8 +99,10 @@
           let category = $(this).children("option:selected").val();
           let ids = map.getPathIds();
           waitingOn = 19;
-          start = new Date();
-          worker.postMessage(["getavg", category]);
+          queryStart = new Date();
+          let startDate = new Date($("#slider-range").slider("values")[0]);
+          let endDate = new Date($("#slider-range").slider("values")[1]);
+          worker.postMessage(["getavg", category, startDate.toDatabaseString(), endDate.toDatabaseString()]);
         });
         worker.postMessage(["init"]);
       }
