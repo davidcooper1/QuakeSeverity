@@ -66,6 +66,11 @@
               min: +(start),
               max: +(end),
               values: [+start, +end],
+              slide: function(event, ui) {
+                let newStart = new Date(ui.values[0]);
+                let newEnd = new Date(ui.values[1]);
+                $("#dates").html(newStart.toDatabaseString() + " - " + newEnd.toDatabaseString());
+              },
               change: function(event, ui) {
                 let newStart = new Date(ui.values[0]);
                 let newEnd = new Date(ui.values[1]);
