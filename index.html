@@ -5,14 +5,13 @@
     <link rel="stylesheet" href="css/jquery-ui.min.css"/>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <style>
-      svg {
-        width: 500px;
-        height: 500px;
-      }
-
       path:hover {
         filter: brightness(80%);
         -webkit-filter: brightness(80%);
+      }
+      .btn {
+        width: 100%;
+        height: 90px;
       }
     </style>
   </head>
@@ -20,31 +19,42 @@
   <div class="container-fluid">
     <div class="row">
       <div class="col-5 p-0">
-        <div class="card w-100" style="height:400px">
+        <div class="card w-100" style="height:500px">
           <div class="card-header">Time Series:</div>
           <div class="card-body">
           </div>
         </div>
       </div>
       <div class="col-3 p-0">
-        <div class="card w-100" style="height:400px">
+        <div class="card w-100" style="height:500px">
           <div class="card-header">Categories:</div>
+          <div>
+            <div id="categorySelect">
+            </div>
+          </div>
         </div>
       </div>
       <div class="col-4 p-0">
-        <div class="card w-100" style="height:400px">
+        <div id="sMapContainer" class="card w-100" style="height:500px">
           <div class="card-header">Selection Map:</div>
         </div>
       </div>
     </div>
+      <div class="row">
+        <div class="col-12 p-0">
+          <div id="mapContainer" class="card w-100" style="height:500px">
+            <div class="card-header">Intensity Map:</div>
+          </div>
+        </div>
+      </div>
   </div>
-    <div id="svgContainer"></div>
+
+
+
+
     <div id="dates"></div>
     <div id="slider-range"></div>
-    <div>
-      <select id="categorySelect">
-      </select>
-    </div>
+
     <script src="lib/polyfill.js"></script>
     <script src="lib/d3.v5.min.js"></script>
     <script src="lib/jquery-3.4.1.min.js"></script>
@@ -55,10 +65,13 @@
     <script src="js/messagehelper.js"></script>
     <script>
       let map = new MapData(500, 500);
-      $("#svgContainer").append(map.svg);
-
+      let selectMap = new MapData(400, 400);
+      $("#mapContainer").append(map.svg);
+      $("#sMapContainer").append(selectMap.svg);
       d3.json('data/Quake.geojson').then( function(mapData) {
         var features = mapData.features;
+        selectMap.data = features;
+        selectMap.draw();
         map.data = features;
         map.draw();
         init();
@@ -103,18 +116,37 @@
       function init() {
         let categories = ["shake_intensity", "sewer_and_water", "power", "medical",
           "buildings"];
+        let catText = ["Shake Intensity", "Sewer and Water", "Power", "Medical",
+           "Buildings"];
         let categorySelectList = $("#categorySelect");
         for (let i = 0; i < categories.length; i++) {
-          categorySelectList.append(new Option(categories[i], categories[i]));
+          let btn = $("<button>").on("click",selectBtn).addClass("btn btn-outline-primary")
+                  .html(catText[i]).val(categories[i]);
+          if (i == 0) {
+            btn.addClass("active");
+          }
+          categorySelectList
+                  .append(btn)
+                  //.append($("<br>"));
         }
         categorySelectList.on("change", updateIntensityMap);
         worker.postMessage(["init"]);
       }
 
+      function selectBtn(){
+        let btn = $(this);
+        $(this).parent().children().each(function(){
+          $(this).removeClass("active");
+        });
+        btn.addClass("active");
+        updateIntensityMap();
+      }
+
       function updateIntensityMap() {
         clearMap();
         console.log("FIRED");
-        let category = $("#categorySelect").children("option:selected").val();
+        let category = $("#categorySelect .active").first().val();
+        console.log(category);
         let startDate = new Date($("#slider-range").slider("values")[0]);
         let endDate = new Date($("#slider-range").slider("values")[1]);
         worker.postMessage(["getavg", category, startDate.toDatabaseString(), endDate.toDatabaseString()]);
