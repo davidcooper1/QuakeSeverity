@@ -8,7 +8,7 @@ self.addEventListener("message", function(event) {
   if (message[0] === "init") {
     loadDBObject();
   } else if (message[0] == "getdaterange") {
-    let result = db.exec("SELECT MIN(time_of_report) AS earliest, MAX(time_of_report) AS latest FROM reports");
+    let result = db.exec("SELECT MIN(time_of_report) AS earliest, MAX(time_of_report) AS latest FROM grouped_reports");
     postMessage(new WorkerMessage(
       WorkerMessage.TYPE_DATA,
       "range",
@@ -19,7 +19,13 @@ self.addEventListener("message", function(event) {
     let category = message[1];
     let start = message[2];
     let end = message[3];
-    let result = db.exec(`SELECT neighborhood_id, AVG(${category}) FROM reports WHERE time_of_report >= '${start}' AND time_of_report <= '${end}' GROUP BY neighborhood_id`);
+    let result = db.exec(`
+      SELECT id, COALESCE(category, 0) FROM neighborhoods
+        LEFT JOIN (SELECT neighborhood_id, AVG(${category}) AS category FROM grouped_reports
+          WHERE time_of_report >= ${start} AND time_of_report <= ${end}
+          GROUP BY neighborhood_id
+        ) ON id = neighborhood_id;`);
+      //AVG(${category}) FROM grouped_reports WHERE time_of_report >= '${start}' AND time_of_report <= '${end}' GROUP BY neighborhood_id`);
 
     let values = result[0].values;
 

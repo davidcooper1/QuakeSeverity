@@ -106,9 +106,10 @@
                 let newStart = new Date(ui.values[0]);
                 let newEnd = new Date(ui.values[1]);
                 $("#dates").html(newStart.toDatabaseString() + " - " + newEnd.toDatabaseString());
+                updateIntensityMap();
               }
             });
-            $("#slider-range").on("slidechange", updateIntensityMap);
+            //$("#slider-range").on("slidechange", updateIntensityMap);
             $("#dates").html(
               start.toDatabaseString() + " - " + end.toDatabaseString()
             );
@@ -146,7 +147,6 @@
       }
 
       function updateIntensityMap() {
-        clearMap();
         let category = $("#categorySelect .active").first().val();
         let startDate = new Date($("#slider-range").slider("values")[0]);
         let endDate = new Date($("#slider-range").slider("values")[1]);
@@ -154,13 +154,7 @@
         waitingOn = 19;
         queryStart = new Date();
         worker.postMessage(["getavg", category, +startDate, +endDate]);
-      }
-
-      function clearMap() {
-        for (let i = 0; i < 20; i++) {
-          map.setIntensity(i, 0);
-        }
-      }
+      };
 
     </script>
   </body>

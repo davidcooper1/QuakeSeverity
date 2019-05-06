@@ -27,3 +27,15 @@ PRAGMA optimize;
 .mode csv
 .import './neighborhoods.csv' neighborhoods
 .import './report-data.csv' reports
+
+DROP TABLE IF EXISTS grouped_reports;
+CREATE TABLE grouped_reports AS SELECT
+	time_of_report,
+	AVG(sewer_and_water) AS sewer_and_water,
+	AVG(power) AS power,
+	AVG(roads_and_bridges) AS roads_and_bridges,
+	AVG(medical) AS medical,
+	AVG(buildings) AS buildings,
+	AVG(shake_intensity) AS shake_intensity,
+	neighborhood_id
+	FROM reports GROUP BY neighborhood_id, time_of_report;
