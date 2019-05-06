@@ -89,9 +89,13 @@
         } else if (msg.type == WorkerMessage.TYPE_DATA) {
           if (msg.data[0] == "intensity") {
             map.setIntensity(msg.data[1], msg.data[2]);
+
+            if (--waitingOn <= 0) {
+              console.log("Query Time: " + (new Date() - queryStart) + "ms");
+            }
           } else if (msg.data[0] == "range") {
-            let start = new Date(msg.data[1].replace(" ", "T"));
-            let end = new Date(msg.data[2].replace(" ", "T"));
+            let start = new Date(msg.data[1]);
+            let end = new Date(msg.data[2]);
 
             $("#slider-range").slider({
               range: true,
@@ -126,8 +130,7 @@
             btn.addClass("active");
           }
           categorySelectList
-                  .append(btn)
-                  //.append($("<br>"));
+            .append(btn)
         }
         categorySelectList.on("change", updateIntensityMap);
         worker.postMessage(["init"]);
@@ -144,12 +147,13 @@
 
       function updateIntensityMap() {
         clearMap();
-        console.log("FIRED");
         let category = $("#categorySelect .active").first().val();
-        console.log(category);
         let startDate = new Date($("#slider-range").slider("values")[0]);
         let endDate = new Date($("#slider-range").slider("values")[1]);
-        worker.postMessage(["getavg", category, startDate.toDatabaseString(), endDate.toDatabaseString()]);
+
+        waitingOn = 19;
+        queryStart = new Date();
+        worker.postMessage(["getavg", category, +startDate, +endDate]);
       }
 
       function clearMap() {
