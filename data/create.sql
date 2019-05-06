@@ -21,11 +21,7 @@ CREATE TABLE reports (
 	FOREIGN KEY (neighborhood_id) REFERENCES neighborhoods (id)
 );
 
--- Set up index to speed up queries based on report date.
-DROP INDEX IF EXISTS dates;
---CREATE INDEX dates ON reports(time_of_report);
-
-PRAGMA cache_size = -10000;
+PRAGMA optimize;
 
 -- Import data into the database.
 .mode csv
