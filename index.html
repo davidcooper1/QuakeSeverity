@@ -9,6 +9,11 @@
         width: 500px;
         height: 500px;
       }
+
+      path:hover {
+        filter: brightness(80%);
+        -webkit-filter: brightness(80%);
+      }
     </style>
   </head>
   <body>
@@ -47,16 +52,9 @@
         //console.log(msg);
         if (msg.type == WorkerMessage.TYPE_STATUS && msg.data[0] == WorkerMessage.STATUS_READY) {
           worker.postMessage(["getdaterange"]);
-          queryStart = new Date();
-          waitingOn = 19;
         } else if (msg.type == WorkerMessage.TYPE_DATA) {
           if (msg.data[0] == "intensity") {
             map.setIntensity(msg.data[1], msg.data[2]);
-            waitingOn--;
-            if (waitingOn == 0) {
-              queryEnd = new Date();
-              console.log("Query Time: " + (queryEnd - queryStart) + "ms");
-            }
           } else if (msg.data[0] == "range") {
             let start = new Date(msg.data[1].replace(" ", "T"));
             let end = new Date(msg.data[2].replace(" ", "T"));
@@ -70,25 +68,13 @@
                 let newStart = new Date(ui.values[0]);
                 let newEnd = new Date(ui.values[1]);
                 $("#dates").html(newStart.toDatabaseString() + " - " + newEnd.toDatabaseString());
-              },
-              change: function(event, ui) {
-                let newStart = new Date(ui.values[0]);
-                let newEnd = new Date(ui.values[1]);
-                $("#dates").html(newStart.toDatabaseString() + " - " + newEnd.toDatabaseString());
-                queryStart = new Date();
-                waitingOn = 19
-                worker.postMessage([
-                  "getavg",
-                  $("#categorySelect").children("option:selected").val(),
-                  newStart.toDatabaseString(),
-                  newEnd.toDatabaseString()
-                ]);
               }
             });
+            $("#slider-range").on("slidechange", updateIntensityMap);
             $("#dates").html(
               start.toDatabaseString() + " - " + end.toDatabaseString()
             );
-            worker.postMessage(["getavg", "shake_intensity", msg.data[1], msg.data[2]]);
+            updateIntensityMap();
           }
         }
       }
@@ -100,16 +86,23 @@
         for (let i = 0; i < categories.length; i++) {
           categorySelectList.append(new Option(categories[i], categories[i]));
         }
-        categorySelectList.on("change", function(e) {
-          let category = $(this).children("option:selected").val();
-          let ids = map.getPathIds();
-          waitingOn = 19;
-          queryStart = new Date();
-          let startDate = new Date($("#slider-range").slider("values")[0]);
-          let endDate = new Date($("#slider-range").slider("values")[1]);
-          worker.postMessage(["getavg", category, startDate.toDatabaseString(), endDate.toDatabaseString()]);
-        });
+        categorySelectList.on("change", updateIntensityMap);
         worker.postMessage(["init"]);
+      }
+
+      function updateIntensityMap() {
+        clearMap();
+        console.log("FIRED");
+        let category = $("#categorySelect").children("option:selected").val();
+        let startDate = new Date($("#slider-range").slider("values")[0]);
+        let endDate = new Date($("#slider-range").slider("values")[1]);
+        worker.postMessage(["getavg", category, startDate.toDatabaseString(), endDate.toDatabaseString()]);
+      }
+
+      function clearMap() {
+        for (let i = 0; i < 20; i++) {
+          map.setIntensity(i, 0);
+        }
       }
 
     </script>
