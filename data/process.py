@@ -14,4 +14,6 @@ with open(join(cwd, "mc1-reports-data.csv"), "r") as inFile :
             date = time.strptime(row[0], "%Y-%m-%d %H:%M:%S")
             millis = int(time.mktime(date) * 1000)
 
-            outCsv.writerow([millis, *row[1:]])
+            other = [row[i] if row[i] != "" else "NULL" for i in range(1, len(row))]
+            outCsv.writerow([millis, *other])
+            #outCsv.writerow([millis, *row[1:]]);
