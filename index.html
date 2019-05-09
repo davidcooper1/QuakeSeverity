@@ -154,7 +154,6 @@
         let endDate = new Date($("#slider-range").slider("values")[1]);
 
         for (map in intensityMaps) {
-          console.log(map);
           worker.postMessage(["getavg", map, +startDate, +endDate]);
         }
 
