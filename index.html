@@ -11,7 +11,7 @@
       }
       .btn {
         width: 100%;
-        height: 90px;
+        height: 75px;
       }
     </style>
   </head>
@@ -29,7 +29,7 @@
         <div class="card w-100" style="height:500px">
           <div class="card-header">Categories:</div>
           <div>
-            <div id="categorySelect">
+            <div class="h-100" id="categorySelect">
             </div>
           </div>
         </div>
@@ -42,15 +42,14 @@
     </div>
       <div class="row">
         <div class="col-12 p-0">
-          <div id="mapContainer" class="card w-100" style="height:500px">
+          <div class="card w-100" style="height:500px">
             <div class="card-header">Intensity Map:</div>
+            <div id="mapRow" class="row">
+            </div>
           </div>
         </div>
       </div>
   </div>
-
-
-
 
     <div id="dates"></div>
     <div id="slider-range"></div>
@@ -64,16 +63,27 @@
     <script src="js/mapdata.js"></script>
     <script src="js/messagehelper.js"></script>
     <script>
-      let map = new MapData(500, 500);
+      let categories = ["shake_intensity", "sewer_and_water", "power", "medical",
+        "buildings", "roads_and_bridges"];
+      let catText = ["Shake Intensity", "Sewer and Water", "Power", "Medical",
+        "Buildings", "Roads and Bridges"];
       let selectMap = new MapData(400, 400);
-      $("#mapContainer").append(map.svg);
+      let intensityMaps = {};
       $("#sMapContainer").append(selectMap.svg);
       d3.json('data/Quake.geojson').then( function(mapData) {
         var features = mapData.features;
         selectMap.data = features;
         selectMap.draw();
-        map.data = features;
-        map.draw();
+        for (let i = 0; i < categories.length; i++) {
+          intensityMaps[categories[i]] = new MapData(500, 500);
+          let col = $("<div>").addClass("col-2");
+          let title = $("<h6>").addClass("text-center").html(catText[i]);
+          col.append(intensityMaps[categories[i]].svg);
+          col.append(title);
+          $("#mapRow").append(col);
+          intensityMaps[categories[i]].data = features;
+          intensityMaps[categories[i]].draw();
+        }
         init();
       });
 
@@ -88,11 +98,7 @@
           worker.postMessage(["getdaterange"]);
         } else if (msg.type == WorkerMessage.TYPE_DATA) {
           if (msg.data[0] == "intensity") {
-            map.setIntensity(msg.data[1], msg.data[2]);
-
-            if (--waitingOn <= 0) {
-              console.log("Query Time: " + (new Date() - queryStart) + "ms");
-            }
+            intensityMaps[msg.data[1]].setIntensity(msg.data[2], msg.data[3]);
           } else if (msg.data[0] == "range") {
             let start = new Date(msg.data[1]);
             let end = new Date(msg.data[2]);
@@ -119,10 +125,6 @@
       }
 
       function init() {
-        let categories = ["shake_intensity", "sewer_and_water", "power", "medical",
-          "buildings"];
-        let catText = ["Shake Intensity", "Sewer and Water", "Power", "Medical",
-           "Buildings"];
         let categorySelectList = $("#categorySelect");
         for (let i = 0; i < categories.length; i++) {
           let btn = $("<button>").on("click",selectBtn).addClass("btn btn-outline-primary")
@@ -147,13 +149,15 @@
       }
 
       function updateIntensityMap() {
-        let category = $("#categorySelect .active").first().val();
+
         let startDate = new Date($("#slider-range").slider("values")[0]);
         let endDate = new Date($("#slider-range").slider("values")[1]);
 
-        waitingOn = 19;
-        queryStart = new Date();
-        worker.postMessage(["getavg", category, +startDate, +endDate]);
+        for (map in intensityMaps) {
+          console.log(map);
+          worker.postMessage(["getavg", map, +startDate, +endDate]);
+        }
+
       };
 
     </script>
