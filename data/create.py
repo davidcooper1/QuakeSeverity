@@ -95,6 +95,9 @@ c.execute("""
         FROM reports GROUP BY neighborhood_id, time_of_report
 """)
 
+c.execute("CREATE UNIQUE INDEX range_times ON ranges(neighborhood_id, time_of_report)")
+c.execute("CREATE INDEX report_times ON reports(neighborhood_id, time_of_report)")
+
 outlierFilterString = """
     UPDATE reports SET {0} = NULL
         WHERE {0} > (
@@ -117,6 +120,8 @@ for category in categories :
     end = time.time()
     print(round(end - start, 2), "s", sep="", flush=True)
 
+c.execute("DROP INDEX range_times")
+c.execute("DROP INDEX report_times")
 c.execute("DROP TABLE ranges")
 
 c.execute("DROP TABLE IF EXISTS grouped_reports")
@@ -132,6 +137,29 @@ c.execute("""
         neighborhood_id
         FROM reports GROUP BY neighborhood_id, time_of_report;
 """);
+
+c.execute("DROP TABLE IF EXISTS avg_reports")
+c.execute("CREATE TABLE avg_reports AS SELECT * FROM grouped_reports")
+
+avgString = """
+    UPDATE avg_reports SET {0}= (
+        SELECT AVG({0}) FROM grouped_reports AS others
+            WHERE others.time_of_report < avg_reports.time_of_report + 1800000
+                AND others.time_of_report > avg_reports.time_of_report - 1800000
+    )
+"""
+
+c.execute("DROP INDEX IF EXISTS group_times");
+c.execute("DROP INDEX IF EXISTS avg_times");
+c.execute("CREATE UNIQUE INDEX group_times ON grouped_reports(neighborhood_id, time_of_report)")
+c.execute("CREATE UNIQUE INDEX avg_times ON avg_reports(neighborhood_id, time_of_report)")
+
+for category in categories :
+    print("Curving {0} outliers... ".format(category), flush=True, end="")
+    start = time.time()
+    c.execute(avgString.format(category))
+    end = time.time()
+    print(round(end - start, 2), "s", sep="", flush=True)
 
 connection.commit()
 connection.close()
