@@ -33,6 +33,7 @@ self.addEventListener("message", function(event) {
       postMessage(new WorkerMessage(
         WorkerMessage.TYPE_DATA,
         "intensity",
+        category,
         values[i][0],
         values[i][1]
       ));
