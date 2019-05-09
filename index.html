@@ -69,7 +69,7 @@
     <script src="lib/bootstrap.min.js"></script>
     <script src="js/mapdata.js"></script>
     <script src="js/messagehelper.js"></script>
-    <script src="js/graph.js"></script>
+    <script src="js/timegraph.js"></script>
     <script>
       let categories = ["shake_intensity", "sewer_and_water", "power", "medical",
         "buildings", "roads_and_bridges"];
@@ -120,52 +120,7 @@
             updateIntensityMaps();
             worker.postMessage(["getpath", "shake_intensity", 1]);
 
-            let updateInt;
-            let selectionMarker;
-
-            timeGraph.on("mouseover", function(e) {
-              updateInt = setInterval(updateIntensityMaps, 100);
-            })
-
-            timeGraph.on("mousemove", function(e) {
-              let position = d3.mouse(this.eventRect.node());
-              let current = this.xScale.invert(position[0]);
-
-              start = (new Date(current)).setHours(current.getHours() - 6);
-              end = (new Date(current)).setHours(current.getHours() + 6);
-
-              let x1 = this.xScale(start);
-              let x2 = this.xScale(end);
-
-              let height = this.eventRect.attr("height");
-
-              try {
-                selectionMarker.remove();
-              } catch (e) {
-
-              }
-
-              console.log(this.id);
-
-              selectionMarker = this.content.append("rect")
-                .attr("fill", "rgba(0,0,0,0.5)")
-                .attr("x", x1)
-                .attr("y", 0)
-                .attr("clip-path", "url(#_time_series_graph_" + this.id + ")")
-                .attr("width", x2 - x1)
-                .attr("height", height);
-
-              console.log(this.xScale(end) - this.xScale(start));
-            });
-
-            timeGraph.on("mouseout", function(e) {
-              console.log("OUT");
-              clearInterval(updateInt);
-              start = range[0];
-              end = range[1];
-              updateIntensityMaps();
-              selectionMarker.remove()
-            });
+            setGraphListeners();
 
           } else if (msg.data[0] == "time_data") {
             let category = msg.data[1];
@@ -215,6 +170,55 @@
         }
 
       };
+
+      function setGraphListeners() {
+        let updateInt;
+        let selectionMarker;
+
+        timeGraph.on("mouseover", function(e) {
+          updateInt = setInterval(updateIntensityMaps, 100);
+        })
+
+        timeGraph.on("mousemove", function(e) {
+          let position = d3.mouse(this.eventRect.node());
+          let current = this.xScale.invert(position[0]);
+
+          start = (new Date(current)).setHours(current.getHours() - 6);
+          end = (new Date(current)).setHours(current.getHours() + 6);
+
+          let x1 = this.xScale(start);
+          let x2 = this.xScale(end);
+
+          let height = this.eventRect.attr("height");
+
+          try {
+            selectionMarker.remove();
+          } catch (e) {
+
+          }
+
+          console.log(this.id);
+
+          selectionMarker = this.content.append("rect")
+            .attr("fill", "rgba(0,0,0,0.5)")
+            .attr("x", x1)
+            .attr("y", 0)
+            .attr("clip-path", "url(#_time_series_graph_" + this.id + ")")
+            .attr("width", x2 - x1)
+            .attr("height", height);
+
+          console.log(this.xScale(end) - this.xScale(start));
+        });
+
+        timeGraph.on("mouseout", function(e) {
+          console.log("OUT");
+          clearInterval(updateInt);
+          start = range[0];
+          end = range[1];
+          updateIntensityMaps();
+          selectionMarker.remove()
+        });
+      }
 
     </script>
   </body>
