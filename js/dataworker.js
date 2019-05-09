@@ -25,7 +25,6 @@ self.addEventListener("message", function(event) {
           WHERE time_of_report >= ${start} AND time_of_report <= ${end}
           GROUP BY neighborhood_id
         ) ON id = neighborhood_id;`);
-      //AVG(${category}) FROM grouped_reports WHERE time_of_report >= '${start}' AND time_of_report <= '${end}' GROUP BY neighborhood_id`);
 
     let values = result[0].values;
 
@@ -39,6 +38,24 @@ self.addEventListener("message", function(event) {
         values[i][1]
       ));
     }
+  } else if (message[0] == "getpath") {
+    let category = message[1];
+    let neighborhood_id = message[2];
+
+    let result = db.exec(`
+      SELECT time_of_report, ${category} FROM avg_reports
+        WHERE neighborhood_id = ${neighborhood_id}
+        ORDER BY time_of_report;
+    `);
+
+    let values = result[0].values;
+
+    postMessage(new WorkerMessage(
+      WorkerMessage.TYPE_DATA,
+      "time_data",
+      category,
+      values
+    ));
   }
 });
 

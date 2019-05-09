@@ -13,16 +13,23 @@
         width: 100%;
         height: 75px;
       }
+
+      line {
+        stroke-width: 1px;
+        shape-rendering: crispEdges;
+      }
+
+      svg {
+        pointer-events: none;
+      }
     </style>
   </head>
   <body>
   <div class="container-fluid">
     <div class="row">
       <div class="col-5 p-0">
-        <div class="card w-100" style="height:500px">
+        <div id="timeGraph" class="card w-100" style="height:500px">
           <div class="card-header">Time Series:</div>
-          <div class="card-body">
-          </div>
         </div>
       </div>
       <div class="col-3 p-0">
@@ -62,16 +69,22 @@
     <script src="lib/bootstrap.min.js"></script>
     <script src="js/mapdata.js"></script>
     <script src="js/messagehelper.js"></script>
+    <script src="js/graph.js"></script>
     <script>
       let categories = ["shake_intensity", "sewer_and_water", "power", "medical",
         "buildings", "roads_and_bridges"];
       let catText = ["Shake Intensity", "Sewer and Water", "Power", "Medical",
         "Buildings", "Roads and Bridges"];
+
       let selectMap = new MapData(400, 400);
+      let timeGraph = new TimeSeriesGraph(400,400, {left: 30, right: 30, top: 40, bottom: 60})
+
       let intensityMaps = {};
+
+      $("#timeGraph").append(timeGraph.svg);
       $("#sMapContainer").append(selectMap.svg);
       d3.json('data/Quake.geojson').then( function(mapData) {
-        var features = mapData.features;
+        let features = mapData.features;
         selectMap.data = features;
         selectMap.draw();
         for (let i = 0; i < categories.length; i++) {
@@ -89,8 +102,8 @@
 
       var worker = new Worker("js/dataworker.js");
 
-      let waitingOn = 0;
-      let queryStart, queryEnd;
+      let range, start, end;
+
       worker.onmessage = function (event) {
         let msg = event.data;
         //console.log(msg);
@@ -100,26 +113,76 @@
           if (msg.data[0] == "intensity") {
             intensityMaps[msg.data[1]].setIntensity(msg.data[2], msg.data[3]);
           } else if (msg.data[0] == "range") {
-            let start = new Date(msg.data[1]);
-            let end = new Date(msg.data[2]);
+            start = new Date(msg.data[1]);
+            end = new Date(msg.data[2]);
+            range = [start, end];
 
-            $("#slider-range").slider({
-              range: true,
-              min: +(start),
-              max: +(end),
-              values: [+start, +end],
-              slide: function(event, ui) {
-                let newStart = new Date(ui.values[0]);
-                let newEnd = new Date(ui.values[1]);
-                $("#dates").html(newStart.toDatabaseString() + " - " + newEnd.toDatabaseString());
-                updateIntensityMap();
+            updateIntensityMaps();
+            worker.postMessage(["getpath", "shake_intensity", 1]);
+
+            let updateInt;
+            let selectionMarker;
+
+            timeGraph.on("mouseover", function(e) {
+              updateInt = setInterval(updateIntensityMaps, 100);
+            })
+
+            timeGraph.on("mousemove", function(e) {
+              let position = d3.mouse(this.eventRect.node());
+              let current = this.xScale.invert(position[0]);
+
+              start = (new Date(current)).setHours(current.getHours() - 6);
+              end = (new Date(current)).setHours(current.getHours() + 6);
+
+              let x1 = this.xScale(start);
+              let x2 = this.xScale(end);
+
+              let height = this.eventRect.attr("height");
+
+              try {
+                selectionMarker.remove();
+              } catch (e) {
+
               }
+
+              console.log(this.id);
+
+              selectionMarker = this.content.append("rect")
+                .attr("fill", "rgba(0,0,0,0.5)")
+                .attr("x", x1)
+                .attr("y", 0)
+                .attr("clip-path", "url(#_time_series_graph_" + this.id + ")")
+                .attr("width", x2 - x1)
+                .attr("height", height);
+
+              console.log(this.xScale(end) - this.xScale(start));
             });
-            //$("#slider-range").on("slidechange", updateIntensityMap);
-            $("#dates").html(
-              start.toDatabaseString() + " - " + end.toDatabaseString()
-            );
-            updateIntensityMap();
+
+            timeGraph.on("mouseout", function(e) {
+              console.log("OUT");
+              clearInterval(updateInt);
+              start = range[0];
+              end = range[1];
+              updateIntensityMaps();
+              selectionMarker.remove()
+            });
+
+          } else if (msg.data[0] == "time_data") {
+            let category = msg.data[1];
+            let values = msg.data[2];
+
+            timeGraph.addPath(new Path(category, values,
+              function(d) {
+                return new Date(d[0]);
+              },
+              function(d) {
+                return d[1];
+              }
+            ));
+
+            $(`#categorySelect :input[value="${category}"]`).addClass("active");
+
+            timeGraph.draw();
           }
         }
       }
@@ -127,34 +190,28 @@
       function init() {
         let categorySelectList = $("#categorySelect");
         for (let i = 0; i < categories.length; i++) {
-          let btn = $("<button>").on("click",selectBtn).addClass("btn btn-outline-primary")
+          let btn = $("<button>").on("click", toggleCategory).addClass("btn btn-outline-primary")
                   .html(catText[i]).val(categories[i]);
-          if (i == 0) {
-            btn.addClass("active");
-          }
-          categorySelectList
-            .append(btn)
+          categorySelectList.append(btn)
         }
-        categorySelectList.on("change", updateIntensityMap);
+
         worker.postMessage(["init"]);
       }
 
-      function selectBtn(){
-        let btn = $(this);
-        $(this).parent().children().each(function(){
-          $(this).removeClass("active");
-        });
-        btn.addClass("active");
-        updateIntensityMap();
+      function toggleCategory(){
+        let self = $(this);
+        if (self.hasClass("active")) {
+          self.removeClass("active");
+          timeGraph.removePath(self.val());
+          return;
+        }
+
+        worker.postMessage(["getpath", self.val(), 1]);
       }
 
-      function updateIntensityMap() {
-
-        let startDate = new Date($("#slider-range").slider("values")[0]);
-        let endDate = new Date($("#slider-range").slider("values")[1]);
-
+      function updateIntensityMaps() {
         for (map in intensityMaps) {
-          worker.postMessage(["getavg", map, +startDate, +endDate]);
+          worker.postMessage(["getavg", map, +start, +end]);
         }
 
       };
