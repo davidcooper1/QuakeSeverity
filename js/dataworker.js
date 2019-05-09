@@ -54,6 +54,7 @@ self.addEventListener("message", function(event) {
       WorkerMessage.TYPE_DATA,
       "time_data",
       category,
+      neighborhood_id,
       values
     ));
   }

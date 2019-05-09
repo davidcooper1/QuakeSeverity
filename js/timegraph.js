@@ -13,7 +13,7 @@ class TimeSeriesGraph {
       this.eventRect = d3.select(this.svg)
         .append("rect")
         .style("fill", "none")
-        .style("pointer-events", "all")
+        .style("pointer-events", "fill")
         .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")")
         .attr("width", this.getContentWidth())
         .attr("height", this.getContentHeight());
@@ -73,6 +73,8 @@ class TimeSeriesGraph {
           return this.paths[i];
         }
       }
+
+      return null;
     }
 
     // Add a path to the graph if there is no other path with the same id.
@@ -142,9 +144,7 @@ class TimeSeriesGraph {
     on(type, func) {
       if (typeof type === "string") {
         if (typeof func === "function") {
-          //$(this.eventRect.node()).on(type, func.bind(this));
-          this.eventRect.on(type, func.bind(this), true);
-          console.log("bound")
+          this.eventRect.on(type, func.bind(this));
         } else {
           throw new TypeError("Expected second argument of type function.");
         }
@@ -163,11 +163,12 @@ class Path {
 
   // TODO: implement add and remove methods
 
-  constructor(id, data, xAccessor, yAccessor) {
+  constructor(id, data, xAccessor, yAccessor, color) {
     this.id = id;
     this.data = data;
     this.xAccessor = xAccessor;
     this.yAccessor = yAccessor;
+    this.color = color;
     this.element = null;
   }
 
@@ -180,7 +181,7 @@ class Path {
     this.element = context.content.append("path")
       .attr("clip-path", "url(#_time_series_graph_" + context.id + ")")
       .attr("class", "line")
-      .style("stroke", "black")
+      .style("stroke", this.color)
       .style("fill", "none")
       .datum(this.data);
   }
@@ -191,7 +192,10 @@ class Path {
   }
 
   draw(xScale, yScale) {
-    this.element.transition().duration(500)
+    this.element
+      .datum(this.data)
+      .transition()
+      .duration(500)
       .attr("d", d3.line()
         .x(function(d) { return xScale(this.xAccessor(d)) }.bind(this))
         .y(function(d) { return yScale(this.yAccessor(d)) }.bind(this))

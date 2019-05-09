@@ -31,6 +31,7 @@ class MapData {
         .attr("d", this.pathBuilder)
         .style("stroke", "black")
         .style("fill", "white")
+        .style("pointer-events", "all")
         .attr("data-toggle", "tooltip")
         .attr("title", function(d) { return d.properties.Nbrhood; })
         .on("mouseover", function(d) {
@@ -40,8 +41,10 @@ class MapData {
   }
 
   on(type, func) {
+    console.log("called");
     if (typeof type === "string") {
       if (typeof func === "function") {
+        console.log("bound");
         this.paths.on(type, func);
       } else {
         throw new TypeError("Expected second argument of type function.");
@@ -56,6 +59,16 @@ class MapData {
     this.paths.each(function(d) {
       if (d.properties.Id == id) {
         d3.select(this).style("fill", self.colorScale(intensity));
+      }
+    });
+  }
+
+  setColor(id, color) {
+    let self = this;
+    console.log(color)
+    this.paths.each(function(d) {
+      if (d.properties.Id == id) {
+        d3.select(this).style("fill", color);
       }
     });
   }

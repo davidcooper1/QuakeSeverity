@@ -67,6 +67,7 @@
     <script src="lib/jquery-ui.min.js"></script>
     <script src="lib/popper.min.js"></script>
     <script src="lib/bootstrap.min.js"></script>
+    <script src="lib/color.js"></script>
     <script src="js/mapdata.js"></script>
     <script src="js/messagehelper.js"></script>
     <script src="js/timegraph.js"></script>
@@ -103,6 +104,7 @@
       var worker = new Worker("js/dataworker.js");
 
       let range, start, end;
+      let selectedNeighborhoods = [];
 
       worker.onmessage = function (event) {
         let msg = event.data;
@@ -118,22 +120,36 @@
             range = [start, end];
 
             updateIntensityMaps();
-            worker.postMessage(["getpath", "shake_intensity", 1]);
-
+            updateTimeSeries();
             setGraphListeners();
+            setMapListeners();
+
+            let firstNeighborhood = d3.select(selectMap.paths.nodes()[0]);
+            let data = firstNeighborhood.datum();
+            firstNeighborhood.on("click").apply(firstNeighborhood.node(), [data]);
 
           } else if (msg.data[0] == "time_data") {
             let category = msg.data[1];
-            let values = msg.data[2];
+            let neighborhood_id = msg.data[2];
+            console.log(neighborhood_id);
+            let values = msg.data[3];
 
-            timeGraph.addPath(new Path(category, values,
-              function(d) {
-                return new Date(d[0]);
-              },
-              function(d) {
-                return d[1];
-              }
-            ));
+            let path;
+            if (path = timeGraph.getPath(neighborhood_id)) {
+              path.data = values;
+            } else {
+              path = new Path(neighborhood_id, values,
+                function(d) {
+                  return new Date(d[0]);
+                },
+                function(d) {
+                  return d[1];
+                },
+                randomColor()
+              )
+              timeGraph.addPath(path);
+              selectMap.setColor(path.id, path.color);
+            }
 
             $(`#categorySelect :input[value="${category}"]`).addClass("active");
 
@@ -145,30 +161,42 @@
       function init() {
         let categorySelectList = $("#categorySelect");
         for (let i = 0; i < categories.length; i++) {
-          let btn = $("<button>").on("click", toggleCategory).addClass("btn btn-outline-primary")
+          let btn = $("<button>").on("click", switchCategory).addClass("btn btn-outline-primary")
                   .html(catText[i]).val(categories[i]);
-          categorySelectList.append(btn)
+          if (i == 0) {
+            btn.addClass("active");
+          }
+          categorySelectList.append(btn);
         }
 
         worker.postMessage(["init"]);
       }
 
-      function toggleCategory(){
+      function switchCategory(){
         let self = $(this);
         if (self.hasClass("active")) {
-          self.removeClass("active");
-          timeGraph.removePath(self.val());
           return;
+        } else {
+          $("#categorySelect").children().each(function() {
+            $(this).removeClass("active");
+          });
         }
+        self.addClass("active");
+        updateTimeSeries();
+      }
 
-        worker.postMessage(["getpath", self.val(), 1]);
+      function updateTimeSeries() {
+        let category = $("#categorySelect .active").val();
+        for (let i = 0; i < selectedNeighborhoods.length; i++) {
+          console.log(i);
+          worker.postMessage(["getpath", category, selectedNeighborhoods[i]]);
+        }
       }
 
       function updateIntensityMaps() {
         for (map in intensityMaps) {
           worker.postMessage(["getavg", map, +start, +end]);
         }
-
       };
 
       function setGraphListeners() {
@@ -197,8 +225,6 @@
 
           }
 
-          console.log(this.id);
-
           selectionMarker = this.content.append("rect")
             .attr("fill", "rgba(0,0,0,0.5)")
             .attr("x", x1)
@@ -206,8 +232,6 @@
             .attr("clip-path", "url(#_time_series_graph_" + this.id + ")")
             .attr("width", x2 - x1)
             .attr("height", height);
-
-          console.log(this.xScale(end) - this.xScale(start));
         });
 
         timeGraph.on("mouseout", function(e) {
@@ -220,6 +244,21 @@
         });
       }
 
+      function setMapListeners() {
+        console.log("here");
+        console.log(selectMap);
+        selectMap.on("click", function(d) {
+          let index;
+          if ((index = selectedNeighborhoods.indexOf(d.properties.Id)) == -1) {
+            selectedNeighborhoods.push(d.properties.Id);
+          } else {
+            d3.select(this).style("fill", "none");
+            selectedNeighborhoods.splice(index, 1);
+            timeGraph.removePath(d.properties.Id);
+          }
+          updateTimeSeries();
+        });
+      }
     </script>
   </body>
 </html>
