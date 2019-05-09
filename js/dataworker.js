@@ -30,6 +30,7 @@ self.addEventListener("message", function(event) {
     let values = result[0].values;
 
     for (let i = 0; i < values.length; i++) {
+      // intensity header, category, neighborhood id, intensity
       postMessage(new WorkerMessage(
         WorkerMessage.TYPE_DATA,
         "intensity",
