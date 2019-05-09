@@ -39,6 +39,18 @@ class MapData {
     }
   }
 
+  on(type, func) {
+    if (typeof type === "string") {
+      if (typeof func === "function") {
+        this.paths.on(type, func);
+      } else {
+        throw new TypeError("Expected second argument of type function.");
+      }
+    } else {
+      throw new TypeError("Expected first argument of type function.");
+    }
+  }
+
   setIntensity(id, intensity) {
     let self = this;
     this.paths.each(function(d) {
