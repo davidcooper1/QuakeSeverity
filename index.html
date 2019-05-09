@@ -210,12 +210,21 @@
         let updateInt;
         let selectionMarker;
 
-        timeGraph.on("mouseover", function(e) {
+        function startViewing() {
+          if (d3.event.type == "touchstart")
+            d3.event.preventDefault();
           updateInt = setInterval(updateIntensityMaps, 100);
-        })
+        }
 
-        timeGraph.on("mousemove", function(e) {
-          let position = d3.mouse(this.eventRect.node());
+        function moveView() {
+          let position;
+          if (d3.event.type == "touchmove") {
+            d3.event.preventDefault();
+            position = d3.touches(this.eventRect.node())[0];
+          } else {
+            position = d3.mouse(this.eventRect.node());
+          }
+
           let current = this.xScale.invert(position[0]);
 
           start = (new Date(current)).setHours(current.getHours() - 6);
@@ -239,16 +248,27 @@
             .attr("clip-path", "url(#_time_series_graph_" + this.id + ")")
             .attr("width", x2 - x1)
             .attr("height", height);
-        });
+        }
 
-        timeGraph.on("mouseout", function(e) {
+        function stopViewing() {
+          if (d3.event.type == "touchend")
+            d3.event.preventDefault();
           console.log("OUT");
           clearInterval(updateInt);
           start = range[0];
           end = range[1];
           updateIntensityMaps();
           selectionMarker.remove()
-        });
+        }
+
+        timeGraph.on("mouseover", startViewing);
+        timeGraph.on("touchstart", startViewing);
+
+        timeGraph.on("mousemove", moveView);
+        timeGraph.on("touchmove", moveView);
+
+        timeGraph.on("mouseout", stopViewing);
+        timeGraph.on("touchend", stopViewing);
       }
 
       function setMapListeners() {
