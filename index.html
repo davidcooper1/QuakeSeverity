@@ -89,7 +89,13 @@
 
       let intensityMaps = {};
 
+
+
       $("#timeGraph").append(timeGraph.svg);
+
+      // Must call preventDefault on touch start IMMEDIATELY to ensure touchmove
+      // fires on Android.
+      $("#timeGraph").on("touchstart", function(e) { e.preventDefault(); });
       $("#sMapContainer").append(selectMap.svg);
       d3.json('data/Quake.geojson').then( function(mapData) {
         let features = mapData.features;
@@ -211,8 +217,9 @@
         let selectionMarker;
 
         function startViewing() {
-          if (d3.event.type == "touchstart")
+          if (d3.event.type == "touchstart") {
             d3.event.preventDefault();
+          }
           updateInt = setInterval(updateIntensityMaps, 100);
         }
 
