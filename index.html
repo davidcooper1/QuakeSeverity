@@ -35,7 +35,7 @@
     <div class="row">
       <div class="col-5 p-0">
         <div id="timeGraph" class="card w-100" style="height:500px">
-          <div class="card-header">Time Series:</div>
+          <div class="card-header">Reported Damage:</div>
         </div>
       </div>
       <div class="col-3 p-0">
@@ -83,11 +83,11 @@
         "Buildings", "Roads and Bridges"];
 
       let selectMap = new MapData(400, 400);
-      let timeGraph = new TimeSeriesGraph(400,400, {left: 30, right: 30, top: 40, bottom: 60})
+      let timeGraph = new TimeSeriesGraph(400,400, {left: 55, right: 30, top: 40, bottom: 60})
+      timeGraph.setLabel(TimeSeriesGraph.X, "Time of Report");
+      timeGraph.setLabel(TimeSeriesGraph.Y, "Intensity");
 
       let intensityMaps = {};
-
-
 
       $("#timeGraph").append(timeGraph.svg);
 
