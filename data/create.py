@@ -3,6 +3,7 @@ import math
 import csv
 import time
 
+# Implementation of STDEV for sqlite3 module to use.
 # http://alexforencich.com/wiki/en/scripts/python/stdev
 class StdevFunc:
     def __init__(self):
@@ -23,11 +24,13 @@ class StdevFunc:
             return None
         return math.sqrt(self.S / (self.k-2))
 
+# Open the database connection.
 connection = sqlite3.connect("report-data.sqlite")
 connection.create_aggregate("stdev", 1, StdevFunc)
 
 c = connection.cursor()
 
+# Creates empty neighborhoods table.
 c.execute("DROP TABLE IF EXISTS neighborhoods")
 c.execute("""
     CREATE TABLE neighborhoods (
@@ -36,6 +39,7 @@ c.execute("""
     )
 """)
 
+# Creates empty reports table.
 c.execute("DROP TABLE IF EXISTS reports")
 c.execute("""
     CREATE TABLE reports (
@@ -51,6 +55,7 @@ c.execute("""
     )
 """)
 
+# Populates neighborhoods table from csv.
 with open("neighborhoods.csv", "r") as neighborhoodsFile :
     neighborhoods = csv.reader(neighborhoodsFile)
     for neighborhood in neighborhoods :
@@ -59,6 +64,7 @@ with open("neighborhoods.csv", "r") as neighborhoodsFile :
             [int(neighborhood[0]), neighborhood[1]]
         )
 
+# Populates reports table from csv.
 with open("report-data.csv", "r") as reportsFile :
     reports = csv.reader(reportsFile)
     for report in reports :
@@ -76,6 +82,7 @@ with open("report-data.csv", "r") as reportsFile :
             ]
         )
 
+# Create ranges table to store outlier ranges for each (neighborhood_id, time_of_report) combination.
 c.execute("""
     CREATE TABLE ranges AS SELECT
         time_of_report,
@@ -95,9 +102,11 @@ c.execute("""
         FROM reports GROUP BY neighborhood_id, time_of_report
 """)
 
+# Create indices for range and report tables to speed up filtering.
 c.execute("CREATE UNIQUE INDEX range_times ON ranges(neighborhood_id, time_of_report)")
 c.execute("CREATE INDEX report_times ON reports(neighborhood_id, time_of_report)")
 
+# Query format string for filtering.
 outlierFilterString = """
     UPDATE reports SET {0} = NULL
         WHERE {0} > (
@@ -111,8 +120,10 @@ outlierFilterString = """
         )
 """
 
+# Categories to pass to filter string.
 categories = ["sewer_and_water", "power", "roads_and_bridges", "medical", "buildings", "shake_intensity"]
 
+# Filters out outliers in each category.
 for category in categories :
     print("Removing {0} outliers... ".format(category), flush=True, end="")
     start = time.time()
@@ -120,10 +131,12 @@ for category in categories :
     end = time.time()
     print(round(end - start, 2), "s", sep="", flush=True)
 
+# Delete the indices and ranges table now that filtering has been done.
 c.execute("DROP INDEX range_times")
 c.execute("DROP INDEX report_times")
 c.execute("DROP TABLE ranges")
 
+# Create table to store averages of each (neighborhood_id, time_of_report) combination.
 c.execute("DROP TABLE IF EXISTS grouped_reports")
 c.execute("""
     CREATE TABLE grouped_reports AS SELECT
@@ -138,13 +151,15 @@ c.execute("""
         FROM reports GROUP BY neighborhood_id, time_of_report;
 """);
 
+# Create table to store smoothed intensity data.
 c.execute("DROP TABLE IF EXISTS avg_reports")
 c.execute("CREATE TABLE avg_reports AS SELECT * FROM grouped_reports")
 
 avgString = """
     UPDATE avg_reports SET {0}= (
         SELECT AVG({0}) FROM grouped_reports AS others
-            WHERE others.time_of_report < avg_reports.time_of_report + 1800000
+            WHERE others.neighborhood_id = avg_reports.neighborhood_id
+                AND others.time_of_report < avg_reports.time_of_report + 1800000
                 AND others.time_of_report > avg_reports.time_of_report - 1800000
     )
 """

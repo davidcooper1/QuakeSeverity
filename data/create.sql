@@ -1,3 +1,5 @@
+-- Fallback database generation script. Doesn't include outlier filtering or line smoothing.
+
 -- Open the database file for editing.
 .open 'report-data.sqlite'
 
