@@ -83,7 +83,7 @@
         "Buildings", "Roads and Bridges"];
 
       let selectMap = new MapData(400, 400);
-      let timeGraph = new TimeSeriesGraph(400,400, {left: 55, right: 30, top: 40, bottom: 60})
+      let timeGraph = new TimeSeriesGraph(600,400, {left: 55, right: 30, top: 40, bottom: 60})
       timeGraph.setLabel(TimeSeriesGraph.X, "Time of Report");
       timeGraph.setLabel(TimeSeriesGraph.Y, "Intensity");
 
@@ -165,6 +165,7 @@
             $(`#categorySelect :input[value="${category}"]`).addClass("active");
 
             timeGraph.draw();
+            timeGraph.resetScale(TimeSeriesGraph.Y);
           }
         }
       }
@@ -199,7 +200,6 @@
       function updateTimeSeries() {
         let category = $("#categorySelect .active").val();
         for (let i = 0; i < selectedNeighborhoods.length; i++) {
-          console.log(i);
           worker.postMessage(["getpath", category, selectedNeighborhoods[i]]);
         }
       }
@@ -212,7 +212,15 @@
 
       function setGraphListeners() {
         let updateInt;
-        let selectionMarker;
+        let viewMarker;
+
+        let isSelecting = false;
+        let selectStart, selectEnd;
+
+        function getViewRange(current) {
+          let width = timeGraph.eventRect.attr("width");
+          return [current - width * 0.05, current + width * 0.05]
+        }
 
         function startViewing() {
           if (d3.event.type == "touchstart") {
@@ -230,24 +238,38 @@
             position = d3.mouse(this.eventRect.node());
           }
 
-          let current = this.xScale.invert(position[0]);
-
-          start = (new Date(current)).setHours(current.getHours() - 6);
-          end = (new Date(current)).setHours(current.getHours() + 6);
-
-          let x1 = this.xScale(start);
-          let x2 = this.xScale(end);
-
+          let current = position[0];
           let height = this.eventRect.attr("height");
+          let x1, x2;
+
+          if (isSelecting) {
+
+            if (current > selectStart) {
+              x1 = selectStart;
+              x2 = current;
+            } else {
+              x1 = current;
+              x2 = selectStart;
+            }
+          } else {
+            let viewRange = getViewRange(current);
+            //start = (new Date(current)).setHours(current.getHours() - 6);
+            //end = (new Date(current)).setHours(current.getHours() + 6);
+            start = this.xScale.invert(viewRange[0]);
+            end = this.xScale.invert(viewRange[1]);
+
+            x1 = viewRange[0];
+            x2 = viewRange[1];
+          }
 
           try {
-            selectionMarker.remove();
+            viewMarker.remove();
           } catch (e) {
 
           }
 
-          selectionMarker = this.content.append("rect")
-            .attr("fill", "rgba(0,0,0,0.5)")
+          viewMarker = this.content.append("rect")
+            .attr("fill", "rgba(" + (isSelecting ? 255 : 0) +  ",0,0,0.5)")
             .attr("x", x1)
             .attr("y", 0)
             .attr("clip-path", "url(#_time_series_graph_" + this.id + ")")
@@ -258,12 +280,16 @@
         function stopViewing() {
           if (d3.event.type == "touchend")
             d3.event.preventDefault();
-          console.log("OUT");
+
+          if (isSelecting) {
+            isSelecting = false;
+            console.log("Selection cancelled");
+          }
           clearInterval(updateInt);
           start = range[0];
           end = range[1];
           updateIntensityMaps();
-          selectionMarker.remove()
+          viewMarker.remove();
         }
 
         timeGraph.on("mouseover", startViewing);
@@ -274,10 +300,27 @@
 
         timeGraph.on("mouseout", stopViewing);
         timeGraph.on("touchend", stopViewing);
+
+        timeGraph.on("click", function(d) {
+          let position = d3.mouse(this.eventRect.node());
+          if (isSelecting) {
+            console.log("Selection end");
+            selectEnd = position[0];
+            isSelecting = false;
+            if (selectStart < selectEnd)
+              this.setDomain(TimeSeriesGraph.X, [this.xScale.invert(selectStart), this.xScale.invert(selectEnd)]);
+            else
+              this.setDomain(TimeSeriesGraph.X, [this.xScale.invert(selectEnd), this.xScale.invert(selectStart)]);
+          } else {
+            console.log("Selection start");
+            selectStart = position[0];
+            isSelecting = true;
+          }
+          viewMarker.remove();
+        });
       }
 
       function setMapListeners() {
-        console.log("here");
         console.log(selectMap);
         selectMap.on("click", function(d) {
           let index;

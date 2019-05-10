@@ -33,9 +33,13 @@ class TimeSeriesGraph {
         .attr("width", this.getContentWidth())
         .attr("height", this.getContentHeight());
 
+      // Scales used to store domain data.
+      this._xScale = d3.scaleTime().range([0, this.getContentWidth()]);
+      this._yScale = d3.scaleLinear().range([this.getContentHeight(), 0]);
+
       // Scales used to translate the data to coordinates on the graph.
-      this.xScale = d3.scaleTime().range([0, this.getContentWidth()]);
-      this.yScale = d3.scaleLinear().range([this.getContentHeight(), 0]);
+      this._xCustomScale = null;
+      this._yCustomScale = null;
 
       // Definition for the X-Axis and its label.
       this.xAxis = this.content.append("g")
@@ -56,6 +60,37 @@ class TimeSeriesGraph {
         .style("text-anchor", "middle");
 
       this.paths = [];
+    }
+
+    setDomain(axis, domain) {
+      if (axis) {
+        this._yCustomScale = this._yScale.copy().domain(domain);
+      } else {
+        this._xCustomScale = this._xScale.copy().domain(domain);
+      }
+      this.draw();
+    }
+
+    resetScale(axis) {
+      if (axis)
+        this._yCustomScale = this._yScale.copy();
+      else
+        this._xCustomScale = this._xScale.copy();
+      this.draw();
+    }
+
+    get xScale() {
+      if (this._xCustomScale) {
+        return this._xCustomScale;
+      }
+      return this._xScale;
+    }
+
+    get yScale() {
+      if (this._yCustomScale) {
+        return this._yCustomScale;
+      }
+      return this._yScale;
     }
 
     // Get the usable graph width.
@@ -135,8 +170,8 @@ class TimeSeriesGraph {
 
     // Redraw the current graph one path at a time.
     draw() {
-      this.xScale.domain(this.getExtent(TimeSeriesGraph.X)).nice();
-      this.yScale.domain(this.getExtent(TimeSeriesGraph.Y)).nice();
+      this._xScale.domain(this.getExtent(TimeSeriesGraph.X)).nice();
+      this._yScale.domain(this.getExtent(TimeSeriesGraph.Y)).nice();
 
       for (let i = 0; i < this.paths.length; i++) {
         this.paths[i].draw(this.xScale, this.yScale);
@@ -177,6 +212,8 @@ class Path {
     this.yAccessor = yAccessor;
     this.color = color;
     this.element = null;
+    this.xScale = null;
+    this.yScale = null;
   }
 
   // Uses TimeSeriesGraph constants for axis determination.
@@ -209,6 +246,16 @@ class Path {
         .x(function(d) { return xScale(this.xAccessor(d)) }.bind(this))
         .y(function(d) { return yScale(this.yAccessor(d)) }.bind(this))
       )
+  }
+
+  valueAt(x) {
+      let bisect = d3.bisector(this.xAccessor).right;
+      let index = bisect(this.data, x);
+      let start = this.data[index - 1];
+      let end = this.data[index];
+      let interpolate = d3.interpolateNumber(this.yAccessor(start), this.yAccessor(end));
+      let range = this.xAccessor(end) - this.xAccessor(start);
+      return interpolate((x % range) / range);
   }
 
 }
