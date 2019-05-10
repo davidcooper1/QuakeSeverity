@@ -36,6 +36,7 @@
       <div class="col-5 p-0">
         <div id="timeGraph" class="card w-100" style="height:500px">
           <div class="card-header">Reported Damage:</div>
+          <div class="text-right" style="padding-right: 20px; color: darkgrey">Click to Select Time Frame<br>ESC to Reset</div>
         </div>
       </div>
       <div class="col-3 p-0">
@@ -369,6 +370,8 @@
         });
 
         $("#resetAll").on("click", function(e) {
+          timeGraph.resetScale(TimeSeriesGraph.X);
+          timeGraph.resetScale(TimeSeriesGraph.Y);
           if (waitingOn > 0)
             return;
           for (let i = 0; i < selectedNeighborhoods.length; i++) {
@@ -378,7 +381,6 @@
             selectMap.setColor(selectedNeighborhoods[i], "none");
           }
           selectedNeighborhoods = [];
-          //updateTimeSeries();
         });
       }
     </script>
