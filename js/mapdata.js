@@ -76,7 +76,6 @@ class MapData {
   // Set the color of a specific path.
   setColor(id, color) {
     let self = this;
-    console.log(color)
     this.paths.each(function(d) {
       if (d.properties.Id == id) {
         d3.select(this).style("fill", color);

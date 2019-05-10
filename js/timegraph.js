@@ -129,7 +129,6 @@ class TimeSeriesGraph {
 
       this.paths.push(path);
       path.add(this);
-      this.draw();
     }
 
     // Remove the path from the graph with the given id should it exist.
@@ -142,7 +141,7 @@ class TimeSeriesGraph {
         }
       }
 
-      this.draw();
+      //this.draw();
     }
 
     // Get the min and max values for the given axis of the graph.
