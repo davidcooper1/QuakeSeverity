@@ -215,6 +215,7 @@
         let viewMarker;
 
         let isClick = true;
+        let lastClick;
         let isSelecting = false;
         let selectStart, selectEnd;
 
@@ -311,6 +312,10 @@
           if (!isClick) return;
           let position = d3.mouse(this.eventRect.node());
           if (isSelecting) {
+            // Prevent fast double click from ruining graph.
+            let now = new Date();
+            if (now - lastClick < 400)
+              return;
             console.log("Selection end");
             selectEnd = position[0];
             isSelecting = false;
@@ -319,11 +324,19 @@
             else
               this.setDomain(TimeSeriesGraph.X, [this.xScale.invert(selectEnd), this.xScale.invert(selectStart)]);
           } else {
+            lastClick = new Date();
             console.log("Selection start");
             selectStart = position[0];
             isSelecting = true;
           }
           viewMarker.remove();
+        });
+
+        $(document).on("keyup", function(e) {
+          console.log("here");
+          if (e.key == "Escape") {
+            timeGraph.resetScale(TimeSeriesGraph.X);
+          }
         });
       }
 
