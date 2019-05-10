@@ -2,7 +2,7 @@
 [![ScreenShot](https://github.com/davidcooper1/QuakeSeverity/blob/master/screenshot.PNG)](https://youtu.be/sJwbzOmhm0k)
 Click on the above screenshot to be redirected to the video, or if you are unable, click [here](https://youtu.be/sJwbzOmhm0k).
 
-[--------------------------------------------------CLICK HERE FOR PROJECT-----------------------------------------------------------](https://davidcooper1.github.io/QuakeSeverity/)
+[--------------------------------------------------CLICK HERE FOR PROJECT--------------------------------------------------------](https://davidcooper1.github.io/QuakeSeverity/)
 
 ## The Challenge
 
