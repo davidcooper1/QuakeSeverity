@@ -214,6 +214,7 @@
         let updateInt;
         let viewMarker;
 
+        let isClick = true;
         let isSelecting = false;
         let selectStart, selectEnd;
 
@@ -231,8 +232,8 @@
 
         function moveView() {
           let position;
+          d3.event.preventDefault();
           if (d3.event.type == "touchmove") {
-            d3.event.preventDefault();
             position = d3.touches(this.eventRect.node())[0];
           } else {
             position = d3.mouse(this.eventRect.node());
@@ -301,7 +302,13 @@
         timeGraph.on("mouseout", stopViewing);
         timeGraph.on("touchend", stopViewing);
 
+        timeGraph.on("mousedown", function() {
+          isClick = true;
+          setTimeout(function() { isClick = false; }, 200);
+        });
+
         timeGraph.on("click", function(d) {
+          if (!isClick) return;
           let position = d3.mouse(this.eventRect.node());
           if (isSelecting) {
             console.log("Selection end");
