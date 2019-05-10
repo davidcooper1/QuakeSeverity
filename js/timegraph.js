@@ -10,6 +10,7 @@ class TimeSeriesGraph {
 
       this.svg = document.createElementNS(d3.namespaces.svg, "svg");
 
+      // Covers the content area of the graph and handles mouse events.
       this.eventRect = d3.select(this.svg)
         .append("rect")
         .style("fill", "none")
@@ -18,11 +19,13 @@ class TimeSeriesGraph {
         .attr("width", this.getContentWidth())
         .attr("height", this.getContentHeight());
 
+      // All displayed elements are added to this SVG group.
       this.content = d3.select(this.svg)
         .attr("viewBox", "0 0 " + this.width + " " + this.height)
         .append("g")
         .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
 
+      // This clipPath is used to trim anything on the graph that might go past the edges.
       this.clip = d3.select(this.svg)
         .append("clipPath")
         .attr("id", "_time_series_graph_" + this.id)
@@ -30,9 +33,11 @@ class TimeSeriesGraph {
         .attr("width", this.getContentWidth())
         .attr("height", this.getContentHeight());
 
+      // Scales used to translate the data to coordinates on the graph.
       this.xScale = d3.scaleTime().range([0, this.getContentWidth()]);
       this.yScale = d3.scaleLinear().range([this.getContentHeight(), 0]);
 
+      // Definition for the X-Axis and its label.
       this.xAxis = this.content.append("g")
         .attr("transform", "translate(0," + this.getContentHeight() + ")");
       this.xAxisLabel = this.content.append("text")
@@ -41,6 +46,7 @@ class TimeSeriesGraph {
           (this.getContentHeight() + this.margin.top) + ")")
         .style("text-anchor", "middle");
 
+      // Definition for the Y-Axis and its label.
       this.yAxis = this.content.append("g");
       this.yAxisLabel = this.content.append("text")
         .attr("transform", "rotate(-90)")
@@ -62,6 +68,7 @@ class TimeSeriesGraph {
       return this.height - this.margin.top - this.margin.bottom;
     }
 
+    // Sets the label for a given axis.
     setLabel(axis, val) {
       ((axis) ? this.yAxisLabel : this.xAxisLabel).text(val);
     }
@@ -126,6 +133,7 @@ class TimeSeriesGraph {
       return result;
     }
 
+    // Redraw the current graph one path at a time.
     draw() {
       this.xScale.domain(this.getExtent(TimeSeriesGraph.X)).nice();
       this.yScale.domain(this.getExtent(TimeSeriesGraph.Y)).nice();
@@ -141,6 +149,7 @@ class TimeSeriesGraph {
         .call(d3.axisLeft(this.yScale).ticks(10));
     }
 
+    // Adds an event listener to this.eventRect (covers the content area of the graph).
     on(type, func) {
       if (typeof type === "string") {
         if (typeof func === "function") {
@@ -161,8 +170,6 @@ TimeSeriesGraph.Y = 1;
 
 class Path {
 
-  // TODO: implement add and remove methods
-
   constructor(id, data, xAccessor, yAccessor, color) {
     this.id = id;
     this.data = data;
@@ -177,6 +184,7 @@ class Path {
     return d3.extent(this.data, (axis) ? this.yAccessor : this.xAccessor);
   }
 
+  // Adds the path to the TimeSeriesGraph context provided.
   add(context) {
     this.element = context.content.append("path")
       .attr("clip-path", "url(#_time_series_graph_" + context.id + ")")
@@ -186,6 +194,7 @@ class Path {
       .datum(this.data);
   }
 
+  // Remove the path from its associated TimeSeriesGraph.
   remove() {
     this.element.remove();
     this.element = null;
@@ -193,7 +202,7 @@ class Path {
 
   draw(xScale, yScale) {
     this.element
-      .datum(this.data)
+      .datum(this.data) // Update the data each draw. Used in category switch.
       .transition()
       .duration(500)
       .attr("d", d3.line()
