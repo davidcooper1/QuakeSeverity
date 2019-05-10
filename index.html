@@ -289,7 +289,7 @@
           }
 
           viewMarker = this.content.append("rect")
-            .attr("fill", "rgba(" + (isSelecting ? 255 : 0) +  ",0,0,0.5)")
+            .attr("fill", "rgba(" + (isSelecting ? 255 : 0) +  ",0,0,0.3)")
             .attr("x", x1)
             .attr("y", 0)
             .attr("clip-path", "url(#_time_series_graph_" + this.id + ")")
@@ -382,7 +382,6 @@
           lastNeighborhood = d.properties.Id
           let path;
           if (path = timeGraph.getPath(d.properties.Id)) {
-            console.log("ADDED");
             $(".line").each(function() {
               $(this).addClass("inactive");
             });
