@@ -1,5 +1,3 @@
-console.log(self.origin);
-
 importScripts("../lib/sql-wasm.js");
 importScripts("./messagehelper.js");
 
