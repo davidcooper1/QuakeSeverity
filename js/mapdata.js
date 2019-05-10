@@ -41,7 +41,7 @@ class MapData {
         .style("pointer-events", "all") // Needed to capture ANY mouse events.
         .attr("data-toggle", "tooltip")
         .attr("title", function(d) { return d.properties.Nbrhood; })
-        .on("mouseover", function(d) {
+        .on("mouseover.tooltip", function(d) {
           $(this).tooltip("show");
         });
     }

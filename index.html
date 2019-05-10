@@ -20,14 +20,24 @@
         border-color: grey !important;
       }
 
-      line {
-        stroke-width: 1px;
+      #timeGraph svg g path:not(.line) {
+        stroke-width: 2px;
         shape-rendering: crispEdges;
+      }
+
+      .line {
+        stroke-width: 1px;
       }
 
       svg {
         pointer-events: none;
       }
+
+      .line.inactive {
+        stroke: rgba(25, 25, 25, 0.05) !important;
+      }
+
+
     </style>
   </head>
   <body>
@@ -360,6 +370,33 @@
             timeGraph.removePath(d.properties.Id);
           }
           updateTimeSeries();
+        });
+
+        let lastNeighborhood = null;
+        let clearTimer;
+
+        selectMap.on("mouseover mousemove", function(d) {
+          if (lastNeighborhood == d.properties.Id)
+            return;
+          clearTimeout(clearTimer);
+          lastNeighborhood = d.properties.Id
+          let path;
+          if (path = timeGraph.getPath(d.properties.Id)) {
+            console.log("ADDED");
+            $(".line").each(function() {
+              $(this).addClass("inactive");
+            });
+            $(path.element.node()).removeClass("inactive");
+          }
+        });
+
+        selectMap.on("mouseout", function(d) {
+          lastNeighborhood = null;
+          clearTimer = setTimeout(function() {
+            $(".line").each(function() {
+              $(this).removeClass("inactive");
+            });
+          }, 200);
         });
 
         $("#selectAll").on("click", function(e) {
