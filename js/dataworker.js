@@ -1,5 +1,5 @@
-importScripts("/lib/sql-wasm.js");
-importScripts("/js/messagehelper.js");
+importScripts("../lib/sql-wasm.js");
+importScripts("./messagehelper.js");
 
 let db;
 
