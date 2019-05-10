@@ -41,47 +41,45 @@
     </style>
   </head>
   <body>
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-5 p-0">
-        <div id="timeGraph" class="card w-100" style="height:500px">
-          <div class="card-header">Reported Damage</div>
-          <div class="text-right" style="padding-right: 20px; color: darkgrey">Click to Select Time Frame<br>ESC to Reset</div>
-        </div>
-      </div>
-      <div class="col-3 p-0">
-        <div class="card w-100" style="height:500px">
-          <div class="card-header">Categories</div>
-          <div>
-            <div class="h-100" id="categorySelect">
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-4 p-0">
-        <div id="sMapContainer" class="card w-100" style="height:500px">
-          <div class="card-header">Selection Map</div>
-          <div class="btn-group-prepend"  role="group"  style="padding-top: 15px; padding-left: 15px">
-            <button id="selectAll" type="button" style="width: 110px; height: 50px;" class="btn btn-outline-secondary">Select All</button>
-            <button id="resetAll" type="button" style="width: 110px; height: 50px;" class="btn btn-outline-secondary">Reset</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="container-fluid">
       <div class="row">
-        <div class="col-12 p-0">
+        <div class="col-5 p-0">
+          <div id="timeGraph" class="card w-100" style="height:500px">
+            <div class="card-header">Reported Damage</div>
+            <div class="text-right" style="padding-right: 20px; color: darkgrey">Click to Select Time Frame<br>ESC to Reset</div>
+          </div>
+        </div>
+        <div class="col-3 p-0">
           <div class="card w-100" style="height:500px">
-            <div class="card-header">Intensity Map</div>
-            <div id="mapRow" class="row">
+            <div class="card-header">Categories</div>
+            <div>
+              <div class="h-100" id="categorySelect">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-4 p-0">
+          <div id="sMapContainer" class="card w-100" style="height:500px">
+            <div class="card-header">Selection Map</div>
+            <div class="btn-group-prepend"  role="group"  style="padding-top: 15px; padding-left: 15px">
+              <button id="selectAll" type="button" style="width: 110px; height: 50px;" class="btn btn-outline-secondary">Select All</button>
+              <button id="resetAll" type="button" style="width: 110px; height: 50px;" class="btn btn-outline-secondary">Reset</button>
             </div>
           </div>
         </div>
       </div>
-  </div>
-
-    <div id="dates"></div>
-    <div id="slider-range"></div>
-
+        <div class="row">
+          <div class="col-12 p-0">
+            <div class="card w-100" style="height:500px">
+              <div class="card-header">Intensity Map</div>
+              <div id="mapRow" class="row">
+              </div>
+              <div id="mapLegend" class="row justify-content-center">
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
     <script src="lib/polyfill.js"></script>
     <script src="lib/d3.v5.min.js"></script>
     <script src="lib/jquery-3.4.1.min.js"></script>
@@ -197,6 +195,39 @@
           }
           categorySelectList.append(btn);
         }
+
+        let scaleSvg = d3.select("#mapLegend")
+          .style("padding-top", "10px")
+          .append("svg")
+          .attr("class", "col-2")
+          .attr("viewBox", "0 0 320 50")
+          .append("g")
+          .attr("transform", "translate(10, 0)");
+
+        let scale = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, 200]);
+
+        let colors = scaleSvg.selectAll("rect")
+          .data(d3.range(300), function(d) { return d })
+          .enter()
+          .append("rect")
+          .attr("x", function(d, i) { return i; })
+          .attr("y", 1)
+          .attr("height", 25)
+          .attr("width", 1)
+          .style("fill", function(d, i) { return scale(d); });
+
+        scaleSvg.append("rect")
+          .attr("width", 300)
+          .attr("height", 25)
+          .attr("x", 0)
+          .attr("y", 1)
+          .style("fill", "none")
+          .style("stroke", "black")
+
+        let scaleAxis = scaleSvg.append("g")
+            .attr("transform", "translate(0, 25)");
+
+        scaleAxis.call(d3.axisBottom(d3.scaleLinear().range([0, 300]).domain([0, 10])).ticks(10));
 
         worker.postMessage(["init"]);
       }
